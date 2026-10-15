@@ -105,17 +105,15 @@ class VistaPlanilla(QWidget):
 
         # Botón Agregar Gasto
         self.btn_nuevo = QPushButton("+ Agregar Gasto")
-        self.btn_nuevo.setStyleSheet(
-            "background-color: #27ae60; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;"
-        )
+        self.btn_nuevo.setProperty("class", "btn-primary")
+        self.btn_nuevo.setToolTip("Agregar un nuevo gasto en el período actual")
         self.btn_nuevo.clicked.connect(self._abrir_alta_gasto)
         barra_filtros.addWidget(self.btn_nuevo)
 
         # Botón Exportar
         self.btn_exportar = QPushButton("📥 Exportar...")
-        self.btn_exportar.setStyleSheet(
-            "background-color: #34495e; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;"
-        )
+        self.btn_exportar.setProperty("class", "btn-secondary")
+        self.btn_exportar.setToolTip("Exportar los gastos a Excel o CSV")
         self.btn_exportar.clicked.connect(self._exportar_datos)
         barra_filtros.addWidget(self.btn_exportar)
 
@@ -183,6 +181,7 @@ class VistaPlanilla(QWidget):
         pie_layout.setContentsMargins(10, 6, 10, 6)
 
         self.lbl_conteo = QLabel("0 gastos")
+        self.lbl_conteo.setStyleSheet(f"color: #7f8c8d; font-style: italic;")
         pie_layout.addWidget(self.lbl_conteo)
 
         self.lbl_subtotales = QLabel("")
@@ -193,7 +192,7 @@ class VistaPlanilla(QWidget):
 
         self.lbl_total_mes = QLabel("Total: $ 0,00")
         self.lbl_total_mes.setStyleSheet(
-            "font-size: 14px; font-weight: bold; color: #2c3e50;"
+            "font-size: 13pt; font-weight: 800; color: #27ae60;"
         )
         pie_layout.addWidget(self.lbl_total_mes)
 
@@ -283,11 +282,16 @@ class VistaPlanilla(QWidget):
         QMessageBox.warning(self, "Error de Validación", mensaje)
 
     def _abrir_alta_gasto(self) -> None:
+        hoy = date.today()
+        if hoy.year == self.anio_actual and hoy.month == self.mes_actual:
+            fecha_inicial = hoy
+        else:
+            fecha_inicial = date(self.anio_actual, self.mes_actual, 1)
         dialogo = DialogoGasto(
             gasto_service=self.gasto_service,
             categoria_repo=self.categoria_repo,
             miembro_repo=self.miembro_repo,
-            fecha_inicial=date(self.anio_actual, self.mes_actual, 1),
+            fecha_inicial=fecha_inicial,
             parent=self,
         )
         dialogo.exec()
