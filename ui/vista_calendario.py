@@ -123,13 +123,12 @@ class VistaCalendario(QWidget):
         layout_det.addWidget(self.lbl_total_dia)
 
         # Botón Agregar gasto en este día
-        self.btn_agregar_dia = QPushButton("+ Agregar gasto en este día")
-        self.btn_agregar_dia.setStyleSheet(
-            "background-color: #2980b9; color: white; font-weight: bold; padding: 7px; border-radius: 4px;"
-        )
+        self.btn_agregar_dia = QPushButton("➕  Agregar gasto en este día")
+        self.btn_agregar_dia.setProperty("class", "btn-cal")
         self.btn_agregar_dia.clicked.connect(self._abrir_alta_para_dia)
         layout_det.addWidget(self.btn_agregar_dia)
 
+        self.frame_detalle.setProperty("class", "panel-detalle")
         layout_principal.addWidget(self.frame_detalle, stretch=35)
 
     def _conectar_eventos(self) -> None:
