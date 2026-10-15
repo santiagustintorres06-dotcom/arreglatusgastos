@@ -32,7 +32,7 @@ from ui.delegados import (
     EditorFechaDelegate,
     ComboCategoriaDelegate,
     ComboMedioPagoDelegate,
-    ComboMiembroDelegate,
+    ComboCuotasDelegate,
 )
 
 
@@ -44,7 +44,7 @@ class VistaPlanilla(QWidget):
         gasto_service: GastoService,
         resumen_service: ResumenService,
         categoria_repo: CategoriaRepo,
-        miembro_repo: MiembroRepo,
+        miembro_repo: MiembroRepo | None = None,
         gasto_repo: GastoRepo | None = None,
         export_service: ExportService | None = None,
         parent=None,
@@ -83,17 +83,12 @@ class VistaPlanilla(QWidget):
         barra_filtros = QHBoxLayout()
         barra_filtros.setSpacing(10)
 
-        barra_filtros.addWidget(QLabel("Filtrar por:"))
+        barra_filtros.addWidget(QLabel("Filtrar por categoría:"))
 
         # Filtro de Categoría
         self.cmb_filtro_cat = QComboBox()
         self.cmb_filtro_cat.addItem("Todas las categorías", None)
         barra_filtros.addWidget(self.cmb_filtro_cat)
-
-        # Filtro de Miembro
-        self.cmb_filtro_miembro = QComboBox()
-        self.cmb_filtro_miembro.addItem("Todos los miembros", None)
-        barra_filtros.addWidget(self.cmb_filtro_miembro)
 
         # Búsqueda libre por texto
         self.txt_buscar = QLineEdit()
@@ -109,6 +104,15 @@ class VistaPlanilla(QWidget):
         self.btn_nuevo.setToolTip("Agregar un nuevo gasto en el período actual")
         self.btn_nuevo.clicked.connect(self._abrir_alta_gasto)
         barra_filtros.addWidget(self.btn_nuevo)
+
+        # Botón Eliminar Gasto Seleccionado
+        self.btn_eliminar = QPushButton("🗑️ Eliminar")
+        self.btn_eliminar.setStyleSheet(
+            "background-color: #c0392b; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;"
+        )
+        self.btn_eliminar.setToolTip("Eliminar el gasto seleccionado (o presiona la tecla Supr)")
+        self.btn_eliminar.clicked.connect(self._eliminar_gasto_seleccionado)
+        barra_filtros.addWidget(self.btn_eliminar)
 
         # Botón Exportar
         self.btn_exportar = QPushButton("📥 Exportar...")
@@ -130,6 +134,7 @@ class VistaPlanilla(QWidget):
         self.tabla.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tabla.customContextMenuRequested.connect(self._mostrar_menu_contextual)
         self.tabla.doubleClicked.connect(self._editar_gasto_seleccionado)
+        self.tabla.keyPressEvent = self._tabla_key_press
 
         # Ajuste de cabeceras
         header = self.tabla.horizontalHeader()
@@ -151,7 +156,7 @@ class VistaPlanilla(QWidget):
             QHeaderView.ResizeMode.ResizeToContents,
         )
         header.setSectionResizeMode(
-            ModeloTablaGastos.COL_PAGO, QHeaderView.ResizeMode.ResizeToContents
+            ModeloTablaGastos.COL_CUOTAS, QHeaderView.ResizeMode.ResizeToContents
         )
 
         # Delegados personalizados para desplegables y selector de fecha inline
@@ -168,8 +173,8 @@ class VistaPlanilla(QWidget):
             ModeloTablaGastos.COL_MEDIO_PAGO, ComboMedioPagoDelegate(self)
         )
         self.tabla.setItemDelegateForColumn(
-            ModeloTablaGastos.COL_PAGO,
-            ComboMiembroDelegate(self.miembro_repo.listar, self),
+            ModeloTablaGastos.COL_CUOTAS,
+            ComboCuotasDelegate(self),
         )
 
         layout.addWidget(self.tabla)
@@ -181,7 +186,7 @@ class VistaPlanilla(QWidget):
         pie_layout.setContentsMargins(10, 6, 10, 6)
 
         self.lbl_conteo = QLabel("0 gastos")
-        self.lbl_conteo.setStyleSheet(f"color: #7f8c8d; font-style: italic;")
+        self.lbl_conteo.setStyleSheet("color: #7f8c8d; font-style: italic;")
         pie_layout.addWidget(self.lbl_conteo)
 
         self.lbl_subtotales = QLabel("")
@@ -200,14 +205,17 @@ class VistaPlanilla(QWidget):
 
     def _conectar_eventos(self) -> None:
         self.cmb_filtro_cat.currentIndexChanged.connect(self._aplicar_filtros)
-        self.cmb_filtro_miembro.currentIndexChanged.connect(
-            self._aplicar_filtros
-        )
         self.txt_buscar.textChanged.connect(self._aplicar_filtros)
 
         # Reaccionar a cambios globales en los datos (sincronización reactiva)
         self.gasto_service.gasto_cambiado.connect(self.recargar_gastos)
         self.modelo.error_ocurrido.connect(self._mostrar_error)
+
+    def _tabla_key_press(self, event) -> None:
+        if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
+            self._eliminar_gasto_seleccionado()
+        else:
+            QTableView.keyPressEvent(self.tabla, event)
 
     def fijar_periodo(self, anio: int, mes: int) -> None:
         """Actualiza el mes/año visualizado."""
@@ -216,10 +224,9 @@ class VistaPlanilla(QWidget):
         self.recargar_gastos()
 
     def recargar_catalogos(self) -> None:
-        """Actualiza las opciones de categorías y miembros en los combos."""
+        """Actualiza las opciones de categorías en los combos."""
         categorias = self.categoria_repo.listar(solo_activas=False)
-        miembros = self.miembro_repo.listar()
-        self.modelo.actualizar_catalogos(categorias, miembros)
+        self.modelo.actualizar_catalogos(categorias)
 
         # Actualizar combo filtro de categorías
         cat_seleccionada = self.cmb_filtro_cat.currentData()
@@ -233,28 +240,14 @@ class VistaPlanilla(QWidget):
             self.cmb_filtro_cat.setCurrentIndex(idx_c)
         self.cmb_filtro_cat.blockSignals(False)
 
-        # Actualizar combo filtro de miembros
-        miembro_sel = self.cmb_filtro_miembro.currentData()
-        self.cmb_filtro_miembro.blockSignals(True)
-        self.cmb_filtro_miembro.clear()
-        self.cmb_filtro_miembro.addItem("Todos los miembros", None)
-        for m in miembros:
-            self.cmb_filtro_miembro.addItem(m.nombre, m.id)
-        idx_m = self.cmb_filtro_miembro.findData(miembro_sel)
-        if idx_m >= 0:
-            self.cmb_filtro_miembro.setCurrentIndex(idx_m)
-        self.cmb_filtro_miembro.blockSignals(False)
-
     def recargar_gastos(self) -> None:
         """Consulta los gastos en la base de datos para el mes activo y actualiza la vista."""
         cat_id = self.cmb_filtro_cat.currentData()
-        miembro_id = self.cmb_filtro_miembro.currentData()
 
         todos_los_gastos = self.gasto_service.listar_por_mes(
             self.anio_actual,
             self.mes_actual,
             categoria_id=cat_id,
-            miembro_id=miembro_id,
         )
 
         texto_busqueda = self.txt_buscar.text().strip().lower()
@@ -309,6 +302,25 @@ class VistaPlanilla(QWidget):
         )
         dialogo.exec()
 
+    def _eliminar_gasto_seleccionado(self) -> None:
+        indices = self.tabla.selectionModel().selectedRows()
+        if not indices:
+            idx = self.tabla.currentIndex()
+            if idx.isValid() and idx.row() < len(self.modelo.gastos):
+                indices = [idx]
+        if not indices:
+            QMessageBox.information(
+                self,
+                "Eliminar Gasto",
+                "Seleccioná primero un gasto de la tabla para eliminarlo.",
+            )
+            return
+
+        gasto = self.modelo.obtener_gasto_en_fila(indices[0].row())
+        if not gasto:
+            return
+        self._eliminar_gasto(gasto)
+
     def _mostrar_menu_contextual(self, pos: QPoint) -> None:
         index = self.tabla.indexAt(pos)
         if not index.isValid():
@@ -318,9 +330,9 @@ class VistaPlanilla(QWidget):
             return
 
         menu = QMenu(self)
-        accion_editar = menu.addAction("Editar gasto")
-        accion_duplicar = menu.addAction("Duplicar gasto")
-        accion_eliminar = menu.addAction("Eliminar gasto")
+        accion_editar = menu.addAction("✏️ Editar gasto")
+        accion_duplicar = menu.addAction("📋 Duplicar gasto")
+        accion_eliminar = menu.addAction("🗑️ Eliminar gasto")
 
         seleccionada = menu.exec(self.tabla.viewport().mapToGlobal(pos))
         if seleccionada == accion_editar:
@@ -339,7 +351,7 @@ class VistaPlanilla(QWidget):
             if gasto.descripcion
             else "Copia",
             medio_pago=gasto.medio_pago,
-            miembro_id=gasto.miembro_id,
+            cuotas=gasto.cuotas,
         )
 
     def _eliminar_gasto(self, gasto: Gasto) -> None:
