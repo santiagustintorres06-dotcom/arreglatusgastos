@@ -25,6 +25,12 @@ from services.gasto_service import GastoService
 from services.resumen_service import ResumenService
 from ui.dialogo_gasto import DialogoGasto
 from ui.modelo_tabla import ModeloTablaGastos
+from ui.delegados import (
+    EditorFechaDelegate,
+    ComboCategoriaDelegate,
+    ComboMedioPagoDelegate,
+    ComboMiembroDelegate,
+)
 
 
 class VistaPlanilla(QWidget):
@@ -124,6 +130,24 @@ class VistaPlanilla(QWidget):
         )
         header.setSectionResizeMode(
             ModeloTablaGastos.COL_PAGO, QHeaderView.ResizeMode.ResizeToContents
+        )
+
+        # Delegados personalizados para desplegables y selector de fecha inline
+        self.tabla.setItemDelegateForColumn(
+            ModeloTablaGastos.COL_FECHA, EditorFechaDelegate(self)
+        )
+        self.tabla.setItemDelegateForColumn(
+            ModeloTablaGastos.COL_CATEGORIA,
+            ComboCategoriaDelegate(
+                lambda: self.categoria_repo.listar(solo_activas=True), self
+            ),
+        )
+        self.tabla.setItemDelegateForColumn(
+            ModeloTablaGastos.COL_MEDIO_PAGO, ComboMedioPagoDelegate(self)
+        )
+        self.tabla.setItemDelegateForColumn(
+            ModeloTablaGastos.COL_PAGO,
+            ComboMiembroDelegate(self.miembro_repo.listar, self),
         )
 
         layout.addWidget(self.tabla)
