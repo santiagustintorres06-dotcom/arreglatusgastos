@@ -21,15 +21,52 @@ def obtener_conexion(ruta_bd: Path | str | None = None) -> sqlite3.Connection:
     return conn
 
 
+ESQUEMA_SQL_DEFAULT = """
+CREATE TABLE IF NOT EXISTS categoria (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL UNIQUE,
+    color TEXT,
+    activa INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS miembro (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS gasto (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha TEXT NOT NULL,
+    monto_cent INTEGER NOT NULL CHECK (monto_cent > 0),
+    categoria_id INTEGER NOT NULL REFERENCES categoria(id),
+    miembro_id INTEGER REFERENCES miembro(id),
+    descripcion TEXT,
+    medio_pago TEXT,
+    creado_en TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_gasto_fecha ON gasto(fecha);
+"""
+
+
 def inicializar_bd(conn: sqlite3.Connection) -> None:
     """Ejecuta el script DDL inicial y carga categorías por defecto si la base está vacía."""
-    with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
-        schema_sql = f.read()
+    if SCHEMA_PATH.exists():
+        with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
+            schema_sql = f.read()
+    else:
+        schema_sql = ESQUEMA_SQL_DEFAULT
 
     conn.executescript(schema_sql)
 
-    # Verificar si ya existen categorías
     cursor = conn.cursor()
+    # Migración/actualización automática de categoría Transporte -> Vehículo
+    cursor.execute(
+        "UPDATE categoria SET nombre = 'Vehículo' WHERE nombre = 'Transporte';"
+    )
+    conn.commit()
+
+    # Verificar si ya existen categorías
     cursor.execute("SELECT COUNT(*) AS total FROM categoria;")
     row = cursor.fetchone()
     if row and row["total"] == 0:

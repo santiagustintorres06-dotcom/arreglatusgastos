@@ -16,7 +16,7 @@ CATEGORIAS_POR_DEFECTO = [
     ("Supermercado", "#27ae60"),
     ("Servicios", "#2980b9"),
     ("Casa", "#d35400"),
-    ("Transporte", "#8e44ad"),
+    ("Vehículo", "#8e44ad"),
     ("Salud", "#c0392b"),
     ("Ocio", "#f39c12"),
     ("Educación", "#16a085"),
