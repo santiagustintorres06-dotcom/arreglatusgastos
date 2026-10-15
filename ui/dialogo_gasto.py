@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from PySide6.QtCore import QDate, Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDateEdit,
     QDialog,
@@ -10,8 +11,10 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
 from config import MEDIOS_DE_PAGO
@@ -28,7 +31,7 @@ class DialogoGasto(QDialog):
         self,
         gasto_service: GastoService,
         categoria_repo: CategoriaRepo,
-        miembro_repo: MiembroRepo,
+        miembro_repo: MiembroRepo | None = None,
         gasto: Gasto | None = None,
         fecha_inicial: date | None = None,
         parent=None,
@@ -40,7 +43,7 @@ class DialogoGasto(QDialog):
         self.gasto_edicion = gasto
 
         self.setWindowTitle("Editar Gasto" if gasto else "Nuevo Gasto")
-        self.setMinimumWidth(380)
+        self.setMinimumWidth(400)
         self.setModal(True)
 
         self._construir_ui(fecha_inicial)
@@ -86,11 +89,35 @@ class DialogoGasto(QDialog):
         self.cmb_medio_pago.addItem("")  # Opción en blanco
         for medio in MEDIOS_DE_PAGO:
             self.cmb_medio_pago.addItem(medio)
+        self.cmb_medio_pago.currentTextChanged.connect(self._al_cambiar_medio_pago)
         form_layout.addRow("Medio de Pago:", self.cmb_medio_pago)
 
-        # 6. Selector de Miembro que pagó
-        self.cmb_miembro = QComboBox()
-        form_layout.addRow("Quién Pagó:", self.cmb_miembro)
+        # 6. Tarjeta de Crédito (Tick y Cuotas)
+        self.chk_tarjeta = QCheckBox("💳 Tarjeta de crédito en cuotas")
+        self.chk_tarjeta.toggled.connect(self._al_toggle_tarjeta)
+        form_layout.addRow("", self.chk_tarjeta)
+
+        self.widget_cuotas = QWidget()
+        layout_cuotas = QHBoxLayout(self.widget_cuotas)
+        layout_cuotas.setContentsMargins(0, 0, 0, 0)
+        self.cmb_cuotas = QComboBox()
+        self.cmb_cuotas.setEditable(True)
+        for c in [
+            "1 cuota",
+            "2 cuotas",
+            "3 cuotas",
+            "6 cuotas",
+            "9 cuotas",
+            "12 cuotas",
+            "18 cuotas",
+            "24 cuotas",
+        ]:
+            self.cmb_cuotas.addItem(c)
+        layout_cuotas.addWidget(self.cmb_cuotas)
+        self.lbl_cuotas = QLabel("Cuotas:")
+        form_layout.addRow(self.lbl_cuotas, self.widget_cuotas)
+        self.lbl_cuotas.setVisible(False)
+        self.widget_cuotas.setVisible(False)
 
         layout.addLayout(form_layout)
 
@@ -103,6 +130,15 @@ class DialogoGasto(QDialog):
 
         # Botones de Acción
         btn_layout = QHBoxLayout()
+
+        if self.gasto_edicion is not None:
+            self.btn_eliminar = QPushButton("🗑️  Eliminar Gasto")
+            self.btn_eliminar.setStyleSheet(
+                "background-color: #c0392b; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;"
+            )
+            self.btn_eliminar.clicked.connect(self._eliminar_gasto)
+            btn_layout.addWidget(self.btn_eliminar)
+
         btn_layout.addStretch()
 
         self.btn_cancelar = QPushButton("Cancelar")
@@ -118,19 +154,31 @@ class DialogoGasto(QDialog):
 
         layout.addLayout(btn_layout)
 
+    def _al_cambiar_medio_pago(self, texto: str) -> None:
+        es_credito = "crédito" in texto.lower() or "credito" in texto.lower()
+        self.chk_tarjeta.blockSignals(True)
+        self.chk_tarjeta.setChecked(es_credito)
+        self.chk_tarjeta.blockSignals(False)
+        self.lbl_cuotas.setVisible(es_credito)
+        self.widget_cuotas.setVisible(es_credito)
+
+    def _al_toggle_tarjeta(self, checked: bool) -> None:
+        if checked:
+            idx = self.cmb_medio_pago.findText("Crédito")
+            if idx >= 0:
+                self.cmb_medio_pago.setCurrentIndex(idx)
+        else:
+            if self.cmb_medio_pago.currentText() == "Crédito":
+                self.cmb_medio_pago.setCurrentIndex(0)
+        self.lbl_cuotas.setVisible(checked)
+        self.widget_cuotas.setVisible(checked)
+
     def _cargar_datos(self) -> None:
         # Cargar Categorías
         categorias = self.categoria_repo.listar(solo_activas=True)
         self.cmb_categoria.clear()
         for cat in categorias:
             self.cmb_categoria.addItem(cat.nombre, cat.id)
-
-        # Cargar Miembros
-        miembros = self.miembro_repo.listar()
-        self.cmb_miembro.clear()
-        self.cmb_miembro.addItem("(Sin especificar)", None)
-        for m in miembros:
-            self.cmb_miembro.addItem(m.nombre, m.id)
 
         # Si estamos editando un gasto existente
         if self.gasto_edicion:
@@ -146,7 +194,6 @@ class DialogoGasto(QDialog):
             if idx_cat >= 0:
                 self.cmb_categoria.setCurrentIndex(idx_cat)
             else:
-                # Si la categoría estaba desactivada, la añadimos para permitir editar sin romper
                 cat_inactiva = self.categoria_repo.obtener_por_id(g.categoria_id)
                 if cat_inactiva:
                     self.cmb_categoria.addItem(
@@ -159,10 +206,31 @@ class DialogoGasto(QDialog):
             if idx_medio >= 0:
                 self.cmb_medio_pago.setCurrentIndex(idx_medio)
 
-            # Seleccionar miembro
-            idx_miembro = self.cmb_miembro.findData(g.miembro_id)
-            if idx_miembro >= 0:
-                self.cmb_miembro.setCurrentIndex(idx_miembro)
+            # Cuotas / Tarjeta
+            if g.cuotas:
+                self.chk_tarjeta.setChecked(True)
+                idx_cuotas = self.cmb_cuotas.findText(g.cuotas)
+                if idx_cuotas >= 0:
+                    self.cmb_cuotas.setCurrentIndex(idx_cuotas)
+                else:
+                    self.cmb_cuotas.setEditText(g.cuotas)
+                self.lbl_cuotas.setVisible(True)
+                self.widget_cuotas.setVisible(True)
+
+    def _eliminar_gasto(self) -> None:
+        if not self.gasto_edicion:
+            return
+        monto_str = str(self.gasto_edicion.monto).replace(".", ",")
+        res = QMessageBox.question(
+            self,
+            "Confirmar eliminación",
+            f"¿Estás seguro de que deseas eliminar este gasto de $ {monto_str}?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if res == QMessageBox.StandardButton.Yes:
+            self.gasto_service.eliminar(self.gasto_edicion.id)
+            self.accept()
 
     def _guardar(self) -> None:
         self.lbl_error.setVisible(False)
@@ -174,7 +242,10 @@ class DialogoGasto(QDialog):
         monto_str = self.txt_monto.text().strip()
         descripcion = self.txt_descripcion.text().strip()
         medio_pago = self.cmb_medio_pago.currentText().strip()
-        miembro_id = self.cmb_miembro.currentData()
+
+        cuotas_val = ""
+        if self.chk_tarjeta.isChecked() or "crédito" in medio_pago.lower():
+            cuotas_val = self.cmb_cuotas.currentText().strip()
 
         try:
             if self.gasto_edicion is None:
@@ -185,7 +256,7 @@ class DialogoGasto(QDialog):
                     categoria_id=categoria_id,
                     descripcion=descripcion,
                     medio_pago=medio_pago,
-                    miembro_id=miembro_id,
+                    cuotas=cuotas_val,
                 )
             else:
                 # Actualizar gasto existente
@@ -196,7 +267,7 @@ class DialogoGasto(QDialog):
                     categoria_id=categoria_id,
                     descripcion=descripcion,
                     medio_pago=medio_pago,
-                    miembro_id=miembro_id,
+                    cuotas=cuotas_val,
                 )
 
             self.accept()
