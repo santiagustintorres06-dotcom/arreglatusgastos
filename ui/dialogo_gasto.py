@@ -106,14 +106,13 @@ class DialogoGasto(QDialog):
         btn_layout.addStretch()
 
         self.btn_cancelar = QPushButton("Cancelar")
+        self.btn_cancelar.setProperty("class", "btn-secondary")
         self.btn_cancelar.clicked.connect(self.reject)
         btn_layout.addWidget(self.btn_cancelar)
 
-        self.btn_guardar = QPushButton("Guardar")
+        self.btn_guardar = QPushButton("💾  Guardar")
+        self.btn_guardar.setProperty("class", "btn-primary")
         self.btn_guardar.setDefault(True)
-        self.btn_guardar.setStyleSheet(
-            "background-color: #27ae60; color: white; font-weight: bold; padding: 6px 14px;"
-        )
         self.btn_guardar.clicked.connect(self._guardar)
         btn_layout.addWidget(self.btn_guardar)
 
