@@ -18,6 +18,7 @@ class GastoRepo:
             if isinstance(fila["fecha"], str)
             else fila["fecha"]
         )
+        cuotas_val = fila["cuotas"] if "cuotas" in fila.keys() and fila["cuotas"] else ""
         return Gasto(
             id=fila["id"],
             fecha=fecha_obj,
@@ -26,6 +27,7 @@ class GastoRepo:
             miembro_id=fila["miembro_id"],
             descripcion=fila["descripcion"] or "",
             medio_pago=fila["medio_pago"] or "",
+            cuotas=cuotas_val,
             creado_en=fila["creado_en"],
         )
 
@@ -44,8 +46,8 @@ class GastoRepo:
         )
         cursor.execute(
             """
-            INSERT INTO gasto (fecha, monto_cent, categoria_id, miembro_id, descripcion, medio_pago)
-            VALUES (?, ?, ?, ?, ?, ?);
+            INSERT INTO gasto (fecha, monto_cent, categoria_id, miembro_id, descripcion, medio_pago, cuotas)
+            VALUES (?, ?, ?, ?, ?, ?, ?);
             """,
             (
                 fecha_str,
@@ -54,6 +56,7 @@ class GastoRepo:
                 gasto.miembro_id,
                 gasto.descripcion.strip() if gasto.descripcion else "",
                 gasto.medio_pago.strip() if gasto.medio_pago else "",
+                gasto.cuotas.strip() if gasto.cuotas else "",
             ),
         )
         gasto.id = cursor.lastrowid
@@ -72,7 +75,7 @@ class GastoRepo:
         cursor.execute(
             """
             UPDATE gasto
-            SET fecha = ?, monto_cent = ?, categoria_id = ?, miembro_id = ?, descripcion = ?, medio_pago = ?
+            SET fecha = ?, monto_cent = ?, categoria_id = ?, miembro_id = ?, descripcion = ?, medio_pago = ?, cuotas = ?
             WHERE id = ?;
             """,
             (
@@ -82,6 +85,7 @@ class GastoRepo:
                 gasto.miembro_id,
                 gasto.descripcion.strip() if gasto.descripcion else "",
                 gasto.medio_pago.strip() if gasto.medio_pago else "",
+                gasto.cuotas.strip() if gasto.cuotas else "",
                 gasto.id,
             ),
         )
@@ -96,7 +100,7 @@ class GastoRepo:
         cursor = self.conn.cursor()
         cursor.execute(
             """
-            SELECT id, fecha, monto_cent, categoria_id, miembro_id, descripcion, medio_pago, creado_en
+            SELECT id, fecha, monto_cent, categoria_id, miembro_id, descripcion, medio_pago, cuotas, creado_en
             FROM gasto
             WHERE id = ?;
             """,
@@ -116,7 +120,7 @@ class GastoRepo:
     ) -> list[Gasto]:
         inicio, fin = self._rango_mes(anio, mes)
         query = [
-            "SELECT id, fecha, monto_cent, categoria_id, miembro_id, descripcion, medio_pago, creado_en",
+            "SELECT id, fecha, monto_cent, categoria_id, miembro_id, descripcion, medio_pago, cuotas, creado_en",
             "FROM gasto",
             "WHERE fecha >= ? AND fecha <= ?",
         ]
@@ -142,7 +146,7 @@ class GastoRepo:
         cursor = self.conn.cursor()
         cursor.execute(
             """
-            SELECT id, fecha, monto_cent, categoria_id, miembro_id, descripcion, medio_pago, creado_en
+            SELECT id, fecha, monto_cent, categoria_id, miembro_id, descripcion, medio_pago, cuotas, creado_en
             FROM gasto
             WHERE fecha = ?
             ORDER BY id ASC;

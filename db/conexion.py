@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS gasto (
     miembro_id INTEGER REFERENCES miembro(id),
     descripcion TEXT,
     medio_pago TEXT,
+    cuotas TEXT DEFAULT '',
     creado_en TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -60,6 +61,14 @@ def inicializar_bd(conn: sqlite3.Connection) -> None:
     conn.executescript(schema_sql)
 
     cursor = conn.cursor()
+
+    # Migración automática de columna cuotas si la base ya existía
+    try:
+        cursor.execute("ALTER TABLE gasto ADD COLUMN cuotas TEXT DEFAULT '';")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+
     # Migración/actualización automática de categoría Transporte -> Vehículo
     cursor.execute(
         "UPDATE categoria SET nombre = 'Vehículo' WHERE nombre = 'Transporte';"

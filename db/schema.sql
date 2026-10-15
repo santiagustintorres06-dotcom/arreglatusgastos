@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS gasto (
     miembro_id INTEGER REFERENCES miembro(id),
     descripcion TEXT,
     medio_pago TEXT,
+    cuotas TEXT DEFAULT '',
     creado_en TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

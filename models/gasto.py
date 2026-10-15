@@ -11,6 +11,7 @@ class Gasto:
     id: int | None = None
     descripcion: str = ""
     medio_pago: str = ""
+    cuotas: str = ""
     miembro_id: int | None = None
     creado_en: str | None = None
 
