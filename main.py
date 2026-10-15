@@ -9,6 +9,7 @@ from repository.gasto_repo import GastoRepo
 from repository.miembro_repo import MiembroRepo
 from services.gasto_service import GastoService
 from services.resumen_service import ResumenService
+from ui.estilo import STYLESHEET
 from ui.ventana_principal import VentanaPrincipal
 
 
@@ -31,6 +32,7 @@ def main() -> None:
     # 5. Inicializar aplicación Qt
     app = QApplication(sys.argv)
     app.setStyle("Fusion")  # Aspecto limpio y moderno consistente en Windows
+    app.setStyleSheet(STYLESHEET)  # Tema visual global
 
     gasto_service = GastoService(gasto_repo, cat_repo)
     resumen_service = ResumenService(gasto_repo, cat_repo)
