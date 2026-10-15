@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QMenu,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -113,6 +115,9 @@ class VistaCalendario(QWidget):
         self.lista_gastos.itemDoubleClicked.connect(
             self._editar_gasto_seleccionado
         )
+        self.lista_gastos.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.lista_gastos.customContextMenuRequested.connect(self._mostrar_menu_contextual_dia)
+        self.lista_gastos.keyPressEvent = self._lista_key_press
         layout_det.addWidget(self.lista_gastos, stretch=1)
 
         # Total del día seleccionado
@@ -122,11 +127,23 @@ class VistaCalendario(QWidget):
         )
         layout_det.addWidget(self.lbl_total_dia)
 
-        # Botón Agregar gasto en este día
-        self.btn_agregar_dia = QPushButton("➕  Agregar gasto en este día")
+        # Botones de acción del día
+        layout_btns_dia = QHBoxLayout()
+        layout_btns_dia.setSpacing(6)
+
+        self.btn_agregar_dia = QPushButton("➕  Agregar")
         self.btn_agregar_dia.setProperty("class", "btn-cal")
         self.btn_agregar_dia.clicked.connect(self._abrir_alta_para_dia)
-        layout_det.addWidget(self.btn_agregar_dia)
+        layout_btns_dia.addWidget(self.btn_agregar_dia, stretch=1)
+
+        self.btn_eliminar_dia = QPushButton("🗑️  Eliminar")
+        self.btn_eliminar_dia.setStyleSheet(
+            "background-color: #c0392b; color: white; font-weight: bold; padding: 7px; border-radius: 4px;"
+        )
+        self.btn_eliminar_dia.clicked.connect(self._eliminar_gasto_seleccionado_dia)
+        layout_btns_dia.addWidget(self.btn_eliminar_dia, stretch=1)
+
+        layout_det.addLayout(layout_btns_dia)
 
         self.frame_detalle.setProperty("class", "panel-detalle")
         layout_principal.addWidget(self.frame_detalle, stretch=35)
@@ -225,3 +242,49 @@ class VistaCalendario(QWidget):
                 parent=self,
             )
             dialogo.exec()
+
+    def _eliminar_gasto_seleccionado_dia(self) -> None:
+        fila = self.lista_gastos.currentRow()
+        if 0 <= fila < len(self.gastos_del_dia_actuales):
+            gasto = self.gastos_del_dia_actuales[fila]
+            res = QMessageBox.question(
+                self,
+                "Confirmar eliminación",
+                f"¿Estás seguro de que deseas eliminar este gasto de {formatear_moneda(gasto.monto)}?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if res == QMessageBox.StandardButton.Yes:
+                self.gasto_service.eliminar(gasto.id)
+        else:
+            QMessageBox.information(
+                self,
+                "Eliminar Gasto",
+                "Seleccioná primero un gasto de la lista para eliminarlo.",
+            )
+
+    def _mostrar_menu_contextual_dia(self, pos) -> None:
+        item = self.lista_gastos.itemAt(pos)
+        if not item:
+            return
+        fila = self.lista_gastos.row(item)
+        if not (0 <= fila < len(self.gastos_del_dia_actuales)):
+            return
+
+        menu = QMenu(self)
+        accion_editar = menu.addAction("✏️  Editar gasto")
+        accion_eliminar = menu.addAction("🗑️  Eliminar gasto")
+
+        seleccionada = menu.exec(self.lista_gastos.mapToGlobal(pos))
+        if seleccionada == accion_editar:
+            self._editar_gasto_seleccionado(item)
+        elif seleccionada == accion_eliminar:
+            self.lista_gastos.setCurrentRow(fila)
+            self._eliminar_gasto_seleccionado_dia()
+
+    def _lista_key_press(self, event) -> None:
+        if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
+            self._eliminar_gasto_seleccionado_dia()
+        else:
+            QListWidget.keyPressEvent(self.lista_gastos, event)
+
