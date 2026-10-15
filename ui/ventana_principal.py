@@ -2,8 +2,8 @@ import calendar
 from datetime import date
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
+    QFrame,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -77,30 +77,35 @@ class VentanaPrincipal(QMainWindow):
         layout_principal.setSpacing(6)
 
         # 1. Barra Superior con Selector de Mes Global
-        barra_periodo = QHBoxLayout()
-        barra_periodo.setSpacing(10)
+        frame_periodo = QFrame()
+        frame_periodo.setProperty("class", "barra-periodo")
+        frame_periodo.setFixedHeight(52)
+        barra_periodo = QHBoxLayout(frame_periodo)
+        barra_periodo.setContentsMargins(8, 4, 8, 4)
+        barra_periodo.setSpacing(12)
 
-        self.btn_mes_anterior = QPushButton("◀ Mes Anterior")
+        self.btn_mes_anterior = QPushButton("◀  Mes Anterior")
+        self.btn_mes_anterior.setProperty("class", "btn-nav")
         self.btn_mes_anterior.clicked.connect(self._retroceder_mes)
         barra_periodo.addWidget(self.btn_mes_anterior)
 
         self.lbl_periodo = QLabel("")
-        font_periodo = QFont()
-        font_periodo.setPointSize(13)
-        font_periodo.setBold(True)
-        self.lbl_periodo.setFont(font_periodo)
+        self.lbl_periodo.setProperty("class", "lbl-periodo")
         self.lbl_periodo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         barra_periodo.addWidget(self.lbl_periodo, stretch=1)
 
         self.btn_hoy = QPushButton("Mes Actual")
+        self.btn_hoy.setProperty("class", "btn-hoy")
+        self.btn_hoy.setToolTip("Ir al mes de hoy")
         self.btn_hoy.clicked.connect(self._ir_mes_actual)
         barra_periodo.addWidget(self.btn_hoy)
 
-        self.btn_mes_siguiente = QPushButton("Mes Siguiente ▶")
+        self.btn_mes_siguiente = QPushButton("Mes Siguiente  ▶")
+        self.btn_mes_siguiente.setProperty("class", "btn-nav")
         self.btn_mes_siguiente.clicked.connect(self._avanzar_mes)
         barra_periodo.addWidget(self.btn_mes_siguiente)
 
-        layout_principal.addLayout(barra_periodo)
+        layout_principal.addWidget(frame_periodo)
 
         # 2. Contenedor de Pestañas (Planilla y Calendario)
         self.tabs = QTabWidget()
