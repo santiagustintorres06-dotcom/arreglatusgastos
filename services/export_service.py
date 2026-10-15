@@ -60,7 +60,7 @@ class ExportService:
             "Descripción",
             "Monto ($)",
             "Medio de Pago",
-            "Pagó",
+            "Cuotas",
         ]
         ws_gastos.append(cabeceras_gastos)
 
@@ -72,16 +72,10 @@ class ExportService:
 
         gastos = self.gasto_repo.listar_por_mes(anio, mes)
         cats = {c.id: c for c in self.categoria_repo.listar(solo_activas=False)}
-        miembros = {m.id: m for m in self.miembro_repo.listar()}
 
         fila_actual = 2
         for g in gastos:
             cat_nom = cats[g.categoria_id].nombre if g.categoria_id in cats else "General"
-            miembro_nom = (
-                miembros[g.miembro_id].nombre
-                if g.miembro_id and g.miembro_id in miembros
-                else ""
-            )
 
             ws_gastos.append(
                 [
@@ -90,7 +84,7 @@ class ExportService:
                     g.descripcion,
                     float(g.monto),
                     g.medio_pago,
-                    miembro_nom,
+                    g.cuotas or "",
                 ]
             )
 
@@ -177,7 +171,6 @@ class ExportService:
         """Exporta los gastos a CSV compatible con UTF-8 para Excel."""
         gastos = self.gasto_repo.listar_por_mes(anio, mes)
         cats = {c.id: c for c in self.categoria_repo.listar(solo_activas=False)}
-        miembros = {m.id: m for m in self.miembro_repo.listar()}
 
         ruta = Path(ruta_archivo)
         with open(ruta, "w", newline="", encoding="utf-8-sig") as f:
@@ -189,16 +182,11 @@ class ExportService:
                     "Descripción",
                     "Monto",
                     "Medio de Pago",
-                    "Pagó",
+                    "Cuotas",
                 ]
             )
             for g in gastos:
                 cat_nom = cats[g.categoria_id].nombre if g.categoria_id in cats else ""
-                miembro_nom = (
-                    miembros[g.miembro_id].nombre
-                    if g.miembro_id and g.miembro_id in miembros
-                    else ""
-                )
                 writer.writerow(
                     [
                         g.fecha.strftime("%d/%m/%Y"),
@@ -206,7 +194,7 @@ class ExportService:
                         g.descripcion,
                         str(g.monto).replace(".", ","),
                         g.medio_pago,
-                        miembro_nom,
+                        g.cuotas or "",
                     ]
                 )
 

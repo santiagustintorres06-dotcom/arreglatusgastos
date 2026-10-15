@@ -116,6 +116,7 @@ class GastoService(QObject):
         categoria_id: int,
         descripcion: str = "",
         medio_pago: str = "",
+        cuotas: str = "",
         miembro_id: int | None = None,
     ) -> Gasto:
         fecha_obj, monto_decimal, cat_id, desc_limpia = self._validar(
@@ -127,6 +128,7 @@ class GastoService(QObject):
             categoria_id=cat_id,
             descripcion=desc_limpia,
             medio_pago=(medio_pago or "").strip(),
+            cuotas=(cuotas or "").strip(),
             miembro_id=miembro_id,
         )
         try:
@@ -145,6 +147,7 @@ class GastoService(QObject):
         categoria_id: int,
         descripcion: str = "",
         medio_pago: str = "",
+        cuotas: str = "",
         miembro_id: int | None = None,
     ) -> None:
         if not id_gasto:
@@ -160,6 +163,7 @@ class GastoService(QObject):
             categoria_id=cat_id,
             descripcion=desc_limpia,
             medio_pago=(medio_pago or "").strip(),
+            cuotas=(cuotas or "").strip(),
             miembro_id=miembro_id,
         )
         try:
