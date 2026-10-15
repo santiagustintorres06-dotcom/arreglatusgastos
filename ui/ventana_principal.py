@@ -20,6 +20,7 @@ from repository.gasto_repo import GastoRepo
 from repository.miembro_repo import MiembroRepo
 from services.gasto_service import GastoService
 from services.resumen_service import ResumenService
+from ui.vista_calendario import VistaCalendario
 from ui.vista_planilla import VistaPlanilla
 
 NOMBRES_MESES = [
@@ -114,13 +115,16 @@ class VentanaPrincipal(QMainWindow):
         )
         self.tabs.addTab(self.vista_planilla, "📋 Vista Planilla")
 
-        # Pestaña 2: Calendario (Placeholder para Etapa 3)
-        self.tab_calendario_placeholder = QWidget()
-        cal_layout = QVBoxLayout(self.tab_calendario_placeholder)
-        lbl_cal = QLabel("Vista Calendario (se implementa en la Etapa 3)")
-        lbl_cal.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        cal_layout.addWidget(lbl_cal)
-        self.tabs.addTab(self.tab_calendario_placeholder, "📅 Vista Calendario")
+        # Pestaña 2: Calendario
+        self.vista_calendario = VistaCalendario(
+            gasto_service=self.gasto_service,
+            resumen_service=self.resumen_service,
+            categoria_repo=self.categoria_repo,
+            miembro_repo=self.miembro_repo,
+            gasto_repo=self.gasto_repo,
+            parent=self,
+        )
+        self.tabs.addTab(self.vista_calendario, "📅 Vista Calendario")
 
         layout_principal.addWidget(self.tabs)
         self.setCentralWidget(contenedor_central)
@@ -163,6 +167,7 @@ class VentanaPrincipal(QMainWindow):
         nombre_mes = NOMBRES_MESES[self.mes_actual]
         self.lbl_periodo.setText(f"{nombre_mes} {self.anio_actual}")
         self.vista_planilla.fijar_periodo(self.anio_actual, self.mes_actual)
+        self.vista_calendario.fijar_periodo(self.anio_actual, self.mes_actual)
         self._actualizar_barra_estado()
 
     def _actualizar_barra_estado(self) -> None:
