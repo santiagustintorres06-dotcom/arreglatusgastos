@@ -67,21 +67,24 @@ def test_delegado_medio_pago(qapp, gasto_service: GastoService):
     )
 
 
-def test_delegado_miembro(
-    qapp, gasto_service: GastoService, miembro_repo: MiembroRepo
-):
-    m1 = miembro_repo.crear(Miembro(id=None, nombre="Lucía"))
-    miembros = miembro_repo.listar()
+from ui.delegados import (
+    ComboCategoriaDelegate,
+    ComboMedioPagoDelegate,
+    ComboCuotasDelegate,
+    EditorFechaDelegate,
+)
 
+
+def test_delegado_cuotas(qapp, gasto_service: GastoService):
     modelo = ModeloTablaGastos(gasto_service)
-    modelo.actualizar_catalogos([], miembros)
-
-    delegate = ComboMiembroDelegate(lambda: miembros)
+    delegate = ComboCuotasDelegate()
     editor = delegate.createEditor(None, None, None)
     assert isinstance(editor, QComboBox)
-    assert editor.count() == len(miembros) + 1  # Incluye opción vacía
+    assert editor.isEditable()
+    assert editor.count() > 3
 
-    editor.setCurrentText("Lucía")
-    idx = modelo.index(0, ModeloTablaGastos.COL_PAGO)
+    editor.setCurrentText("3 cuotas")
+    idx = modelo.index(0, ModeloTablaGastos.COL_CUOTAS)
     delegate.setModelData(editor, modelo, idx)
-    assert modelo.data(idx, Qt.ItemDataRole.DisplayRole) == "Lucía"
+    assert modelo.data(idx, Qt.ItemDataRole.DisplayRole) == "3 cuotas"
+

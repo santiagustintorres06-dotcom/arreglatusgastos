@@ -80,3 +80,34 @@ def test_ventana_principal_navegacion_mes(
     ventana.btn_mes_anterior.click()
     assert ventana.mes_actual == mes_inicial
     assert ventana.anio_actual == anio_inicial
+
+
+def test_vista_planilla_eliminacion_gasto(
+    qapp,
+    gasto_service: GastoService,
+    resumen_service: ResumenService,
+    categoria_repo: CategoriaRepo,
+    monkeypatch,
+):
+    from PySide6.QtWidgets import QMessageBox
+
+    super_cat = categoria_repo.obtener_por_nombre("Supermercado")
+    gasto_service.crear("2026-10-10", "1500.00", super_cat.id, "Para borrar")
+
+    vista = VistaPlanilla(
+        gasto_service=gasto_service,
+        resumen_service=resumen_service,
+        categoria_repo=categoria_repo,
+    )
+    vista.fijar_periodo(2026, 10)
+    assert vista.modelo.rowCount() == 2
+
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.Yes
+    )
+
+    vista.tabla.selectRow(0)
+    vista._eliminar_gasto_seleccionado()
+
+    assert vista.modelo.rowCount() == 1
+
