@@ -10,12 +10,7 @@ from services.gasto_service import GastoService
 from ui.dialogo_gasto import DialogoGasto
 
 
-@pytest.fixture(scope="session")
-def qapp():
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    return app
+
 
 
 def test_dialogo_gasto_nuevo(

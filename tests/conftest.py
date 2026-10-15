@@ -7,6 +7,16 @@ from repository.miembro_repo import MiembroRepo
 from repository.gasto_repo import GastoRepo
 from services.gasto_service import GastoService
 from services.resumen_service import ResumenService
+from PySide6.QtWidgets import QApplication
+
+
+@pytest.fixture(scope="session")
+def qapp():
+    """Instancia QApplication para tests que interactúan con widgets o modelos Qt."""
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    return app
 
 
 @pytest.fixture
