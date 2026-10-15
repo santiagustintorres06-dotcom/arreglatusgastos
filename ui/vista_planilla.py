@@ -4,6 +4,7 @@ from decimal import Decimal
 from PySide6.QtCore import QPoint, Qt
 from PySide6.QtWidgets import (
     QComboBox,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QHeaderView,
@@ -20,7 +21,9 @@ from PySide6.QtWidgets import (
 from config import formatear_moneda
 from models.gasto import Gasto
 from repository.categoria_repo import CategoriaRepo
+from repository.gasto_repo import GastoRepo
 from repository.miembro_repo import MiembroRepo
+from services.export_service import ExportService
 from services.gasto_service import GastoService
 from services.resumen_service import ResumenService
 from ui.dialogo_gasto import DialogoGasto
@@ -42,6 +45,8 @@ class VistaPlanilla(QWidget):
         resumen_service: ResumenService,
         categoria_repo: CategoriaRepo,
         miembro_repo: MiembroRepo,
+        gasto_repo: GastoRepo | None = None,
+        export_service: ExportService | None = None,
         parent=None,
     ):
         super().__init__(parent)
@@ -49,6 +54,17 @@ class VistaPlanilla(QWidget):
         self.resumen_service = resumen_service
         self.categoria_repo = categoria_repo
         self.miembro_repo = miembro_repo
+        self.gasto_repo = gasto_repo
+        self.export_service = export_service or (
+            ExportService(
+                gasto_repo=gasto_repo,
+                categoria_repo=categoria_repo,
+                miembro_repo=miembro_repo,
+                resumen_service=resumen_service,
+            )
+            if gasto_repo
+            else None
+        )
 
         self.anio_actual = date.today().year
         self.mes_actual = date.today().month
@@ -94,6 +110,14 @@ class VistaPlanilla(QWidget):
         )
         self.btn_nuevo.clicked.connect(self._abrir_alta_gasto)
         barra_filtros.addWidget(self.btn_nuevo)
+
+        # Botón Exportar
+        self.btn_exportar = QPushButton("📥 Exportar...")
+        self.btn_exportar.setStyleSheet(
+            "background-color: #34495e; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;"
+        )
+        self.btn_exportar.clicked.connect(self._exportar_datos)
+        barra_filtros.addWidget(self.btn_exportar)
 
         layout.addLayout(barra_filtros)
 
@@ -324,3 +348,44 @@ class VistaPlanilla(QWidget):
         )
         if respuesta == QMessageBox.StandardButton.Yes:
             self.gasto_service.eliminar(gasto.id)
+
+    def _exportar_datos(self) -> None:
+        if not self.export_service:
+            QMessageBox.warning(
+                self, "Exportación", "El servicio de exportación no está disponible."
+            )
+            return
+
+        nombre_sugerido = f"Gastos_{self.anio_actual}_{self.mes_actual:02d}.xlsx"
+        ruta_archivo, filtro = QFileDialog.getSaveFileName(
+            self,
+            "Exportar Gastos",
+            nombre_sugerido,
+            "Archivos de Excel (*.xlsx);;Archivos CSV (*.csv)",
+        )
+        if not ruta_archivo:
+            return
+
+        try:
+            if ruta_archivo.endswith(".csv") or "CSV" in filtro:
+                self.export_service.exportar_a_csv(
+                    ruta_archivo, self.anio_actual, self.mes_actual
+                )
+            else:
+                if not ruta_archivo.endswith(".xlsx"):
+                    ruta_archivo += ".xlsx"
+                self.export_service.exportar_a_excel(
+                    ruta_archivo, self.anio_actual, self.mes_actual
+                )
+
+            QMessageBox.information(
+                self,
+                "Exportación Exitosa",
+                f"Los gastos fueron exportados correctamente a:\n{ruta_archivo}",
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error de Exportación",
+                f"No se pudo completar la exportación:\n{e}",
+            )

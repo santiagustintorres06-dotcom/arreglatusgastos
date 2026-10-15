@@ -111,6 +111,7 @@ class VentanaPrincipal(QMainWindow):
             resumen_service=self.resumen_service,
             categoria_repo=self.categoria_repo,
             miembro_repo=self.miembro_repo,
+            gasto_repo=self.gasto_repo,
             parent=self,
         )
         self.tabs.addTab(self.vista_planilla, "📋 Vista Planilla")
