@@ -110,3 +110,38 @@ class ComboMiembroDelegate(QStyledItemDelegate):
 
     def setModelData(self, editor: QComboBox, model, index):
         model.setData(index, editor.currentText(), Qt.ItemDataRole.EditRole)
+
+
+class ComboCuotasDelegate(QStyledItemDelegate):
+    """Delegado para editar la columna Cuotas con opciones de cuotas comunes o personalizadas."""
+
+    OPCIONES = [
+        "",
+        "1 cuota",
+        "2 cuotas",
+        "3 cuotas",
+        "6 cuotas",
+        "9 cuotas",
+        "12 cuotas",
+        "18 cuotas",
+        "24 cuotas",
+    ]
+
+    def createEditor(self, parent, option, index):
+        editor = QComboBox(parent)
+        editor.setEditable(True)
+        for op in self.OPCIONES:
+            editor.addItem(op)
+        return editor
+
+    def setEditorData(self, editor: QComboBox, index):
+        val = index.model().data(index, Qt.ItemDataRole.DisplayRole)
+        idx = editor.findText(val or "")
+        if idx >= 0:
+            editor.setCurrentIndex(idx)
+        else:
+            editor.setEditText(val or "")
+
+    def setModelData(self, editor: QComboBox, model, index):
+        model.setData(index, editor.currentText().strip(), Qt.ItemDataRole.EditRole)
+

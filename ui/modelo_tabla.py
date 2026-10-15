@@ -21,7 +21,7 @@ class ModeloTablaGastos(QAbstractTableModel):
     COL_DESCRIPCION = 2
     COL_MONTO = 3
     COL_MEDIO_PAGO = 4
-    COL_PAGO = 5
+    COL_CUOTAS = 5
 
     CABECERAS = [
         "Fecha",
@@ -29,7 +29,7 @@ class ModeloTablaGastos(QAbstractTableModel):
         "Descripción",
         "Monto",
         "Medio de Pago",
-        "Pagó",
+        "Cuotas",
     ]
 
     def __init__(self, gasto_service: GastoService, parent=None):
@@ -49,15 +49,19 @@ class ModeloTablaGastos(QAbstractTableModel):
             "descripcion": "",
             "monto": None,
             "medio_pago": "",
+            "cuotas": "",
             "miembro_id": None,
         }
 
     def actualizar_catalogos(
-        self, categorias: list[Categoria], miembros: list[Miembro]
+        self,
+        categorias: list[Categoria],
+        miembros: list[Miembro] | None = None,
     ) -> None:
         """Actualiza los diccionarios de categorías y miembros en memoria."""
         self.categorias = {c.id: c for c in categorias if c.id is not None}
-        self.miembros = {m.id: m for m in miembros if m.id is not None}
+        if miembros:
+            self.miembros = {m.id: m for m in miembros if m.id is not None}
         # Si el borrador no tiene categoría, asignar la primera por defecto
         if categorias and self._borrador_nueva_fila["categoria_id"] is None:
             self._borrador_nueva_fila["categoria_id"] = categorias[0].id
@@ -123,7 +127,7 @@ class ModeloTablaGastos(QAbstractTableModel):
                 return int(
                     Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
                 )
-            if col in (self.COL_FECHA, self.COL_MEDIO_PAGO):
+            if col in (self.COL_FECHA, self.COL_MEDIO_PAGO, self.COL_CUOTAS):
                 return int(
                     Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter
                 )
@@ -152,9 +156,8 @@ class ModeloTablaGastos(QAbstractTableModel):
                     return ""
                 if col == self.COL_MEDIO_PAGO:
                     return b["medio_pago"]
-                if col == self.COL_PAGO:
-                    m = self.miembros.get(b["miembro_id"])
-                    return m.nombre if m else ""
+                if col == self.COL_CUOTAS:
+                    return b.get("cuotas", "")
             return None
 
         # Filas existentes de gastos
@@ -172,9 +175,8 @@ class ModeloTablaGastos(QAbstractTableModel):
                 return formatear_moneda(gasto.monto)
             if col == self.COL_MEDIO_PAGO:
                 return gasto.medio_pago
-            if col == self.COL_PAGO:
-                m = self.miembros.get(gasto.miembro_id)
-                return m.nombre if m else ""
+            if col == self.COL_CUOTAS:
+                return gasto.cuotas or ""
 
         if role == Qt.ItemDataRole.EditRole:
             if col == self.COL_FECHA:
@@ -188,9 +190,8 @@ class ModeloTablaGastos(QAbstractTableModel):
                 return str(gasto.monto)
             if col == self.COL_MEDIO_PAGO:
                 return gasto.medio_pago
-            if col == self.COL_PAGO:
-                m = self.miembros.get(gasto.miembro_id)
-                return m.nombre if m else ""
+            if col == self.COL_CUOTAS:
+                return gasto.cuotas or ""
 
         return None
 
@@ -217,7 +218,7 @@ class ModeloTablaGastos(QAbstractTableModel):
         nueva_cat_id = gasto.categoria_id
         nueva_desc = gasto.descripcion
         nuevo_medio = gasto.medio_pago
-        nuevo_miembro_id = gasto.miembro_id
+        nueva_cuotas = gasto.cuotas
 
         try:
             if col == self.COL_FECHA:
@@ -230,7 +231,6 @@ class ModeloTablaGastos(QAbstractTableModel):
                 else:
                     nueva_fecha = date.fromisoformat(val_str)
             elif col == self.COL_CATEGORIA:
-                # Buscar por nombre o id
                 val_str = str(value).strip()
                 cat_encontrada = next(
                     (
@@ -249,22 +249,8 @@ class ModeloTablaGastos(QAbstractTableModel):
                 nuevo_monto = parsear_monto(str(value))
             elif col == self.COL_MEDIO_PAGO:
                 nuevo_medio = str(value).strip()
-            elif col == self.COL_PAGO:
-                val_str = str(value).strip()
-                if not val_str:
-                    nuevo_miembro_id = None
-                else:
-                    m_enc = next(
-                        (
-                            m
-                            for m in self.miembros.values()
-                            if m.nombre.lower() == val_str.lower()
-                        ),
-                        None,
-                    )
-                    if not m_enc:
-                        raise ValueError(f"Miembro '{val_str}' no existe.")
-                    nuevo_miembro_id = m_enc.id
+            elif col == self.COL_CUOTAS:
+                nueva_cuotas = str(value).strip()
 
             # Invocar al servicio para validar y persistir
             self.gasto_service.actualizar(
@@ -274,7 +260,7 @@ class ModeloTablaGastos(QAbstractTableModel):
                 categoria_id=nueva_cat_id,
                 descripcion=nueva_desc,
                 medio_pago=nuevo_medio,
-                miembro_id=nuevo_miembro_id,
+                cuotas=nueva_cuotas,
             )
 
             # Actualizar objeto local
@@ -283,7 +269,7 @@ class ModeloTablaGastos(QAbstractTableModel):
             gasto.categoria_id = nueva_cat_id
             gasto.descripcion = nueva_desc
             gasto.medio_pago = nuevo_medio
-            gasto.miembro_id = nuevo_miembro_id
+            gasto.cuotas = nueva_cuotas
 
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole])
             return True
@@ -323,22 +309,8 @@ class ModeloTablaGastos(QAbstractTableModel):
                 b["monto"] = parsear_monto(str(value))
             elif col == self.COL_MEDIO_PAGO:
                 b["medio_pago"] = str(value).strip()
-            elif col == self.COL_PAGO:
-                val_str = str(value).strip()
-                if not val_str:
-                    b["miembro_id"] = None
-                else:
-                    m = next(
-                        (
-                            m
-                            for m in self.miembros.values()
-                            if m.nombre.lower() == val_str.lower()
-                        ),
-                        None,
-                    )
-                    if not m:
-                        raise ValueError(f"Miembro '{val_str}' no existe.")
-                    b["miembro_id"] = m.id
+            elif col == self.COL_CUOTAS:
+                b["cuotas"] = str(value).strip()
 
             # Si ya tenemos los datos mínimos requeridos (fecha, categoría y monto), creamos el gasto
             if b["fecha"] and b["categoria_id"] and b["monto"] is not None:
@@ -348,7 +320,7 @@ class ModeloTablaGastos(QAbstractTableModel):
                     categoria_id=b["categoria_id"],
                     descripcion=b["descripcion"],
                     medio_pago=b["medio_pago"],
-                    miembro_id=b["miembro_id"],
+                    cuotas=b.get("cuotas", ""),
                 )
                 # Insertar en la lista interna
                 pos = len(self.gastos)
