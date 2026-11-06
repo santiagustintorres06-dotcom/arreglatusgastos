@@ -18,10 +18,12 @@ from config import formatear_moneda
 from repository.categoria_repo import CategoriaRepo
 from repository.gasto_repo import GastoRepo
 from repository.miembro_repo import MiembroRepo
+from repository.tarjeta_repo import TarjetaRepo
 from services.gasto_service import GastoService
 from services.resumen_service import ResumenService
 from ui.vista_calendario import VistaCalendario
 from ui.vista_planilla import VistaPlanilla
+from ui.vista_tarjetas import VistaTarjetas
 
 NOMBRES_MESES = [
     "",
@@ -41,7 +43,7 @@ NOMBRES_MESES = [
 
 
 class VentanaPrincipal(QMainWindow):
-    """Ventana principal con pestañas (Planilla y Calendario) y selector de mes global."""
+    """Ventana principal con pestañas (Planilla, Calendario y Tarjetas) y selector de mes global."""
 
     def __init__(
         self,
@@ -50,6 +52,7 @@ class VentanaPrincipal(QMainWindow):
         categoria_repo: CategoriaRepo,
         miembro_repo: MiembroRepo,
         gasto_repo: GastoRepo,
+        tarjeta_repo: TarjetaRepo,
         parent=None,
     ):
         super().__init__(parent)
@@ -58,13 +61,14 @@ class VentanaPrincipal(QMainWindow):
         self.categoria_repo = categoria_repo
         self.miembro_repo = miembro_repo
         self.gasto_repo = gasto_repo
+        self.tarjeta_repo = tarjeta_repo
 
         hoy = date.today()
         self.anio_actual = hoy.year
         self.mes_actual = hoy.month
 
         self.setWindowTitle("Organizador de Gastos Familiares")
-        self.resize(1000, 650)
+        self.resize(1100, 680)
 
         self._construir_ui()
         self._conectar_eventos()
@@ -107,7 +111,7 @@ class VentanaPrincipal(QMainWindow):
 
         layout_principal.addWidget(frame_periodo)
 
-        # 2. Contenedor de Pestañas (Planilla y Calendario)
+        # 2. Contenedor de Pestañas
         self.tabs = QTabWidget()
 
         # Pestaña 1: Planilla
@@ -131,6 +135,15 @@ class VentanaPrincipal(QMainWindow):
             parent=self,
         )
         self.tabs.addTab(self.vista_calendario, "📅 Vista Calendario")
+
+        # Pestaña 3: Tarjetas y Cuotas
+        self.vista_tarjetas = VistaTarjetas(
+            tarjeta_repo=self.tarjeta_repo,
+            gasto_service=self.gasto_service,
+            categoria_repo=self.categoria_repo,
+            parent=self,
+        )
+        self.tabs.addTab(self.vista_tarjetas, "💳 Tarjetas / Cuotas")
 
         layout_principal.addWidget(self.tabs)
         self.setCentralWidget(contenedor_central)
@@ -174,6 +187,7 @@ class VentanaPrincipal(QMainWindow):
         self.lbl_periodo.setText(f"{nombre_mes} {self.anio_actual}")
         self.vista_planilla.fijar_periodo(self.anio_actual, self.mes_actual)
         self.vista_calendario.fijar_periodo(self.anio_actual, self.mes_actual)
+        self.vista_tarjetas.fijar_periodo(self.anio_actual, self.mes_actual)
         self._actualizar_barra_estado()
 
     def _actualizar_barra_estado(self) -> None:

@@ -7,6 +7,7 @@ from paths import asegurar_directorios
 from repository.categoria_repo import CategoriaRepo
 from repository.gasto_repo import GastoRepo
 from repository.miembro_repo import MiembroRepo
+from repository.tarjeta_repo import TarjetaRepo
 from services.gasto_service import GastoService
 from services.resumen_service import ResumenService
 from ui.estilo import STYLESHEET
@@ -28,6 +29,7 @@ def main() -> None:
     cat_repo = CategoriaRepo(conn)
     miembro_repo = MiembroRepo(conn)
     gasto_repo = GastoRepo(conn)
+    tarjeta_repo = TarjetaRepo(conn)
 
     # 5. Inicializar aplicación Qt
     app = QApplication(sys.argv)
@@ -44,6 +46,7 @@ def main() -> None:
         categoria_repo=cat_repo,
         miembro_repo=miembro_repo,
         gasto_repo=gasto_repo,
+        tarjeta_repo=tarjeta_repo,
     )
     ventana.show()
 

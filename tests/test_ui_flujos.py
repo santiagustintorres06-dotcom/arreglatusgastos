@@ -5,6 +5,7 @@ import pytest
 from repository.categoria_repo import CategoriaRepo
 from repository.gasto_repo import GastoRepo
 from repository.miembro_repo import MiembroRepo
+from repository.tarjeta_repo import TarjetaRepo
 from services.gasto_service import GastoService
 from services.resumen_service import ResumenService
 from ui.ventana_principal import VentanaPrincipal
@@ -56,6 +57,7 @@ def test_ventana_principal_navegacion_mes(
     categoria_repo: CategoriaRepo,
     miembro_repo: MiembroRepo,
     gasto_repo: GastoRepo,
+    tarjeta_repo: TarjetaRepo,
 ):
     ventana = VentanaPrincipal(
         gasto_service=gasto_service,
@@ -63,6 +65,7 @@ def test_ventana_principal_navegacion_mes(
         categoria_repo=categoria_repo,
         miembro_repo=miembro_repo,
         gasto_repo=gasto_repo,
+        tarjeta_repo=tarjeta_repo,
     )
 
     mes_inicial = ventana.mes_actual
