@@ -51,3 +51,16 @@ CREATE TABLE IF NOT EXISTS consumo_tarjeta (
 
 CREATE INDEX IF NOT EXISTS idx_consumo_tarjeta_id ON consumo_tarjeta(tarjeta_id);
 CREATE INDEX IF NOT EXISTS idx_consumo_estado ON consumo_tarjeta(estado);
+
+CREATE TABLE IF NOT EXISTS resumen_tarjeta_mes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tarjeta_id INTEGER NOT NULL REFERENCES tarjeta(id),
+    anio INTEGER NOT NULL,
+    mes INTEGER NOT NULL,
+    gasto_id INTEGER NOT NULL REFERENCES gasto(id),
+    total_cent INTEGER NOT NULL,
+    creado_en TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tarjeta_id, anio, mes)
+);
+
+CREATE INDEX IF NOT EXISTS idx_resumen_tarjeta_mes ON resumen_tarjeta_mes(tarjeta_id, anio, mes);

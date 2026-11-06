@@ -170,6 +170,17 @@ class TarjetaRepo:
         )
         self._conn.commit()
 
+    def adelantar_cuotas_restantes(self, id_consumo: int) -> None:
+        """Marca todas las cuotas pendientes como pagadas y finaliza el consumo."""
+        self._conn.execute(
+            """UPDATE consumo_tarjeta
+               SET cuotas_pagadas = cantidad_cuotas,
+                   estado = 'finalizado'
+               WHERE id = ? AND estado = 'activo'""",
+            (id_consumo,),
+        )
+        self._conn.commit()
+
     def cancelar_consumo(self, id_consumo: int) -> None:
         self._conn.execute(
             "UPDATE consumo_tarjeta SET estado = 'cancelado' WHERE id = ?",
@@ -181,6 +192,25 @@ class TarjetaRepo:
         self._conn.execute(
             "UPDATE consumo_tarjeta SET gasto_id_planilla = ? WHERE id = ?",
             (gasto_id, id_consumo),
+        )
+        self._conn.commit()
+
+    def esta_mes_volcado_planilla(self, tarjeta_id: int, anio: int, mes: int) -> bool:
+        """Verifica si el resumen de la tarjeta para el mes ya fue registrado en la planilla."""
+        row = self._conn.execute(
+            "SELECT 1 FROM resumen_tarjeta_mes WHERE tarjeta_id = ? AND anio = ? AND mes = ?",
+            (tarjeta_id, anio, mes),
+        ).fetchone()
+        return row is not None
+
+    def registrar_mes_volcado_planilla(
+        self, tarjeta_id: int, anio: int, mes: int, gasto_id: int, total_cent: int
+    ) -> None:
+        """Registra el volcado del resumen mensual de una tarjeta a la planilla."""
+        self._conn.execute(
+            """INSERT INTO resumen_tarjeta_mes (tarjeta_id, anio, mes, gasto_id, total_cent)
+               VALUES (?, ?, ?, ?, ?)""",
+            (tarjeta_id, anio, mes, gasto_id, total_cent),
         )
         self._conn.commit()
 

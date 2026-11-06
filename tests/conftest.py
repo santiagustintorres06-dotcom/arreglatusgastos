@@ -5,6 +5,7 @@ from db.conexion import obtener_conexion, inicializar_bd
 from repository.categoria_repo import CategoriaRepo
 from repository.miembro_repo import MiembroRepo
 from repository.gasto_repo import GastoRepo
+from repository.tarjeta_repo import TarjetaRepo
 from services.gasto_service import GastoService
 from services.resumen_service import ResumenService
 from PySide6.QtWidgets import QApplication
@@ -41,6 +42,11 @@ def miembro_repo(db_conn: sqlite3.Connection):
 @pytest.fixture
 def gasto_repo(db_conn: sqlite3.Connection):
     return GastoRepo(db_conn)
+
+
+@pytest.fixture
+def tarjeta_repo(db_conn: sqlite3.Connection):
+    return TarjetaRepo(db_conn)
 
 
 @pytest.fixture

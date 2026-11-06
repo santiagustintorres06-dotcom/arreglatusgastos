@@ -149,7 +149,7 @@ def resumen_mes_por_tarjeta(
 
         if cuotas_mes:
             total = sum(ic.monto_cent for ic in cuotas_mes)
-            ya_volcado = any(c.gasto_id_planilla is not None for c in consumos_tarjeta)
+            ya_volcado = repo.esta_mes_volcado_planilla(tarjeta.id, anio, mes)
             resumenes.append(
                 ResumenMes(
                     tarjeta_id=tarjeta.id,
