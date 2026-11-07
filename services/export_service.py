@@ -23,8 +23,10 @@ class ExportService:
         categoria_repo: CategoriaRepo,
         miembro_repo: MiembroRepo,
         resumen_service: ResumenService,
+        tarjeta_repo=None,
     ):
         self.gasto_repo = gasto_repo
+        self.tarjeta_repo = tarjeta_repo
         self.categoria_repo = categoria_repo
         self.miembro_repo = miembro_repo
         self.resumen_service = resumen_service
@@ -150,8 +152,16 @@ class ExportService:
 
             fila_res += 1
 
-        # Autoajustar ancho de columnas en ambas hojas
-        for ws in (ws_gastos, ws_resumen):
+        hojas = [ws_gastos, ws_resumen]
+
+        # ----------------- HOJA 3: TARJETAS -----------------
+        if self.tarjeta_repo is not None:
+            hojas.append(
+                self._hoja_tarjetas(wb, anio, mes, font_cabecera, align_centro, align_derecha, borde_fino, font_total)
+            )
+
+        # Autoajustar ancho de columnas
+        for ws in hojas:
             for col in ws.columns:
                 max_len = 0
                 col_letter = get_column_letter(col[0].column)
@@ -164,6 +174,91 @@ class ExportService:
         ruta = Path(ruta_archivo)
         wb.save(ruta)
         return ruta
+
+    def _hoja_tarjetas(
+        self, wb, anio, mes, font_cabecera, align_centro, align_derecha, borde_fino, font_total
+    ):
+        """Hoja 'Tarjetas': cuotas del mes, detalle de consumos y proyección de 6 meses."""
+        from services.calendario_tarjetas import ETIQUETA_ESTADO, eventos_vencimiento_mes_repo
+        from services.tarjeta_service import calcular_saldo_pendiente, proyeccion_6_meses
+
+        ws = wb.create_sheet(title="Tarjetas")
+        fill = PatternFill(start_color="2471A3", end_color="2471A3", fill_type="solid")
+        font_titulo = Font(name="Calibri", size=13, bold=True, color="2C3E50")
+        formato = "$ #,##0.00"
+
+        def titulo(texto):
+            ws.append([])
+            ws.append([texto])
+            ws.cell(row=ws.max_row, column=1).font = font_titulo
+
+        def cabecera(columnas):
+            ws.append(columnas)
+            for i in range(1, len(columnas) + 1):
+                c = ws.cell(row=ws.max_row, column=i)
+                c.font, c.fill, c.alignment = font_cabecera, fill, align_centro
+
+        def fila(valores, cols_moneda=()):
+            ws.append(valores)
+            r = ws.max_row
+            for i in range(1, len(valores) + 1):
+                c = ws.cell(row=r, column=i)
+                c.border = borde_fino
+                if i in cols_moneda:
+                    c.number_format = formato
+                    c.alignment = align_derecha
+
+        # 1) Cuotas que vencen en el mes exportado
+        ws.append([f"Tarjetas — cuotas que vencen en {mes:02d}/{anio}"])
+        ws.cell(row=1, column=1).font = font_titulo
+        cabecera(["Tarjeta", "Vence", "Consumo", "Cuota", "Monto ($)", "Estado", "En Planilla"])
+        total_mes = 0
+        for ev in eventos_vencimiento_mes_repo(self.tarjeta_repo, anio, mes):
+            for c in ev.cuotas:
+                fila(
+                    [
+                        ev.tarjeta_nombre,
+                        ev.fecha.strftime("%d/%m/%Y"),
+                        c.descripcion,
+                        f"{c.numero_cuota}/{c.total_cuotas}",
+                        c.monto_cent / 100,
+                        "Pagada" if c.pagada else ETIQUETA_ESTADO[ev.estado],
+                        "Sí" if ev.volcado_planilla else "No",
+                    ],
+                    cols_moneda=(5,),
+                )
+                total_mes += c.monto_cent
+        ws.append(["", "", "", "Total del mes:", total_mes / 100])
+        ws.cell(row=ws.max_row, column=4).font = font_total
+        c = ws.cell(row=ws.max_row, column=5)
+        c.font, c.number_format, c.alignment = font_total, formato, align_derecha
+
+        # 2) Detalle de todos los consumos
+        titulo("Detalle de consumos")
+        cabecera(["Descripción", "Tarjeta", "Fecha compra", "Total ($)", "Cuotas", "Pagadas", "Valor cuota ($)", "Saldo pendiente ($)", "Estado"])
+        tarjetas = {t.id: t.nombre for t in self.tarjeta_repo.listar()}
+        for cons in self.tarjeta_repo.listar_consumos():
+            fila(
+                [
+                    cons.descripcion,
+                    tarjetas.get(cons.tarjeta_id, "—"),
+                    date.fromisoformat(cons.fecha_compra).strftime("%d/%m/%Y"),
+                    cons.monto_total_cent / 100,
+                    cons.cantidad_cuotas,
+                    cons.cuotas_pagadas,
+                    cons.monto_cuota_cent / 100,
+                    (calcular_saldo_pendiente(cons) if cons.estado == "activo" else 0) / 100,
+                    cons.estado.capitalize(),
+                ],
+                cols_moneda=(4, 7, 8),
+            )
+
+        # 3) Proyección
+        titulo("Proyección: cuotas a pagar en los próximos 6 meses")
+        cabecera(["Mes", "Total ($)"])
+        for a, m, total in proyeccion_6_meses(self.tarjeta_repo, date(anio, mes, 1)):
+            fila([f"{m:02d}/{a}", total / 100], cols_moneda=(2,))
+        return ws
 
     def exportar_a_csv(
         self, ruta_archivo: Path | str, anio: int, mes: int
