@@ -124,10 +124,14 @@ def resumen_mes_por_tarjeta(
     repo: TarjetaRepo,
     anio: int,
     mes: int,
+    incluir_pagadas: bool = False,
 ) -> list[ResumenMes]:
     """
     Para cada tarjeta activa, calcula el total a pagar en el mes indicado.
     Solo incluye tarjetas con al menos una cuota en ese mes.
+
+    Con incluir_pagadas=True suma también las cuotas ya marcadas como pagadas
+    (el total completo del resumen, que es lo que se pasa a la Planilla).
     """
     tarjetas = repo.listar(solo_activas=True)
     consumos_activos = repo.listar_consumos(estado="activo") + repo.listar_consumos(
@@ -144,7 +148,7 @@ def resumen_mes_por_tarjeta(
                 continue
             proyectadas = proyectar_cuotas(consumo, tarjeta)
             for ic in proyectadas:
-                if ic.anio == anio and ic.mes == mes and not ic.pagada:
+                if ic.anio == anio and ic.mes == mes and (incluir_pagadas or not ic.pagada):
                     cuotas_mes.append(ic)
 
         if cuotas_mes:

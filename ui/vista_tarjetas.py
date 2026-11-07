@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -101,6 +101,10 @@ class TableWidgetItemCustom(QTableWidgetItem):
 class VistaTarjetas(QWidget):
     """Pestaña de Tarjetas y Cuotas."""
 
+    # Se emite cada vez que cambian tarjetas o consumos (alta, edición, pago,
+    # cancelación, pase a planilla) para que el Calendario se actualice solo.
+    datos_cambiados = Signal()
+
     def __init__(
         self,
         tarjeta_repo: TarjetaRepo,
@@ -122,6 +126,10 @@ class VistaTarjetas(QWidget):
         self._construir_ui()
         self._conectar_atajos()
         self._recargar()
+
+        # Si se borra/edita en la Planilla un resumen pasado desde acá, refrescar
+        if self._gasto_service is not None:
+            self._gasto_service.gasto_cambiado.connect(self._recargar)
 
     # ------------------------------------------------------------------
     # UI
@@ -326,6 +334,7 @@ class VistaTarjetas(QWidget):
         self._consumos_cargados = self._repo.listar_consumos()
         self._aplicar_filtros()
         self._actualizar_resumen()
+        self.datos_cambiados.emit()
 
     def _aplicar_filtros(self) -> None:
         tarjeta_id = self.combo_filtro_tarjeta.currentData()
@@ -470,7 +479,8 @@ class VistaTarjetas(QWidget):
             self._lbl_limite_valor.setText("Sin límite")
             self._lbl_limite_sub.setText("No configurado")
 
-        # Estado del botón Pasar a Planilla
+        # Estado del botón Pasar a Planilla (total completo, aunque haya cuotas ya pagadas)
+        resumenes = resumen_mes_por_tarjeta(self._repo, self._anio, self._mes, incluir_pagadas=True)
         pendientes_volcar = [r for r in resumenes if not r.ya_volcado_planilla and r.total_cent > 0]
         if not resumenes:
             self.btn_pasar_planilla.setEnabled(False)
@@ -642,7 +652,7 @@ class VistaTarjetas(QWidget):
             )
             return
 
-        resumenes = resumen_mes_por_tarjeta(self._repo, self._anio, self._mes)
+        resumenes = resumen_mes_por_tarjeta(self._repo, self._anio, self._mes, incluir_pagadas=True)
         if not resumenes:
             QMessageBox.information(
                 self,
