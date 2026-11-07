@@ -269,6 +269,12 @@ class VistaTarjetas(QWidget):
         self.btn_nuevo.setToolTip("Cargar un nuevo consumo (Ctrl+N)")
         self.btn_nuevo.clicked.connect(self._nuevo_consumo)
 
+        self.btn_resumenes = QPushButton("🧾 Resúmenes")
+        self.btn_resumenes.setToolTip(
+            "Ver mes a mes cada resumen de la tarjeta: cierre, vencimiento, total y pagos"
+        )
+        self.btn_resumenes.clicked.connect(self._abrir_resumenes)
+
         self.btn_pagar_cuota = QPushButton("✅ Marcar cuota pagada")
         self.btn_pagar_cuota.setToolTip("Registra el pago de 1 cuota en el consumo seleccionado")
         self.btn_pagar_cuota.clicked.connect(self._marcar_cuota_pagada)
@@ -291,6 +297,7 @@ class VistaTarjetas(QWidget):
 
         for b in [
             self.btn_nuevo,
+            self.btn_resumenes,
             self.btn_pagar_cuota,
             self.btn_deshacer,
             self.btn_adelantar,
@@ -740,6 +747,20 @@ class VistaTarjetas(QWidget):
             "Gastos registrados",
             f"Se registraron exitosamente {len(pendientes)} resumen(es) de tarjeta en la Planilla.",
         )
+        self._recargar()
+
+    def _abrir_resumenes(self) -> None:
+        from ui.dialogo_resumenes import DialogoResumenes
+
+        if not any(t.activa for t in self._tarjetas_map.values()):
+            QMessageBox.information(
+                self,
+                "Sin tarjetas",
+                "Primero agregá una tarjeta usando el botón '🏦 Gestionar tarjetas'.",
+            )
+            return
+        dlg = DialogoResumenes(self._repo, tarjeta_id=self.combo_filtro_tarjeta.currentData(), parent=self)
+        dlg.exec()
         self._recargar()
 
     def _gestionar_tarjetas(self) -> None:

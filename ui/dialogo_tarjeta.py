@@ -65,6 +65,17 @@ class DialogoTarjeta(QDialog):
 
         layout.addLayout(form)
 
+        # Explicación en vivo de cómo cierra y vence esta tarjeta
+        self.lbl_explicacion = QLabel("")
+        self.lbl_explicacion.setWordWrap(True)
+        self.lbl_explicacion.setStyleSheet(
+            "background-color: #eaf2f8; color: #1b4f72; border-radius: 6px; padding: 8px;"
+        )
+        layout.addWidget(self.lbl_explicacion)
+        self.spin_cierre.valueChanged.connect(self._actualizar_explicacion)
+        self.spin_vencimiento.valueChanged.connect(self._actualizar_explicacion)
+        self._actualizar_explicacion()
+
         lbl_nota = QLabel("* Campos obligatorios")
         lbl_nota.setStyleSheet("color: #7f8c8d; font-size: 9pt;")
         layout.addWidget(lbl_nota)
@@ -77,6 +88,26 @@ class DialogoTarjeta(QDialog):
         botones.accepted.connect(self._validar_y_aceptar)
         botones.rejected.connect(self.reject)
         layout.addWidget(botones)
+
+    def _actualizar_explicacion(self) -> None:
+        from datetime import date
+
+        from services.tarjeta_service import fechas_resumen, resumen_de_compra
+        from ui.dialogo_resumenes import texto_regla_tarjeta
+
+        t = Tarjeta(
+            nombre="",
+            dia_cierre=self.spin_cierre.value(),
+            dia_vencimiento=self.spin_vencimiento.value(),
+        )
+        hoy = date.today()
+        anio, mes = resumen_de_compra(hoy, t)
+        f = fechas_resumen(t, anio, mes)
+        self.lbl_explicacion.setText(
+            f"{texto_regla_tarjeta(t)}\n"
+            f"Ejemplo: una compra de hoy ({hoy:%d/%m}) entra en el resumen que cierra el "
+            f"{f.cierre:%d/%m} y se paga el {f.vencimiento:%d/%m/%Y}."
+        )
 
     def _cargar_datos(self, t: Tarjeta) -> None:
         self.txt_nombre.setText(t.nombre)
