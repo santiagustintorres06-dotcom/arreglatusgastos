@@ -38,13 +38,27 @@ class ModeloTablaGastos(QAbstractTableModel):
         self.gastos: list[Gasto] = []
         self.categorias: dict[int, Categoria] = {}
         self.miembros: dict[int, Miembro] = {}
+        # Mes que se está mostrando: define la fecha por defecto de la fila nueva
+        self._periodo: tuple[int, int] | None = None
 
         # Fila borrador para inserción rápida al final de la tabla
         self._borrador_nueva_fila = self._nuevo_borrador()
 
+    def fijar_periodo(self, anio: int, mes: int) -> None:
+        """Indica qué mes muestra la planilla (para la fecha por defecto de la fila nueva)."""
+        self._periodo = (anio, mes)
+
+    def _fecha_por_defecto(self) -> date:
+        # Si se está viendo otro mes, la fila nueva arranca en el día 1 de ese mes
+        # (antes usaba siempre "hoy" y el gasto se guardaba en otro mes).
+        hoy = date.today()
+        if self._periodo and self._periodo != (hoy.year, hoy.month):
+            return date(self._periodo[0], self._periodo[1], 1)
+        return hoy
+
     def _nuevo_borrador(self) -> dict:
         return {
-            "fecha": date.today(),
+            "fecha": self._fecha_por_defecto(),
             "categoria_id": None,
             "descripcion": "",
             "monto": None,
@@ -322,16 +336,26 @@ class ModeloTablaGastos(QAbstractTableModel):
                     medio_pago=b["medio_pago"],
                     cuotas=b.get("cuotas", ""),
                 )
-                # Insertar en la lista interna
-                pos = len(self.gastos)
-                self.beginInsertRows(QModelIndex(), pos, pos)
-                self.gastos.append(nuevo)
+                # La señal gasto_cambiado del servicio ya puede haber recargado
+                # la tabla desde la base (y por lo tanto incluir el gasto nuevo).
+                # Sólo lo agregamos a mano si todavía no está, para no mostrarlo
+                # duplicado (antes aparecía dos veces y al borrar el "repetido"
+                # se borraba el gasto real).
+                if not any(g.id == nuevo.id for g in self.gastos):
+                    pos = len(self.gastos)
+                    self.beginInsertRows(QModelIndex(), pos, pos)
+                    self.gastos.append(nuevo)
+                    self.endInsertRows()
                 self._borrador_nueva_fila = self._nuevo_borrador()
                 if self.categorias:
                     self._borrador_nueva_fila["categoria_id"] = next(
                         iter(self.categorias.keys())
                     )
-                self.endInsertRows()
+                fila_borrador = len(self.gastos)
+                self.dataChanged.emit(
+                    self.index(fila_borrador, 0),
+                    self.index(fila_borrador, self.columnCount() - 1),
+                )
 
             return True
 

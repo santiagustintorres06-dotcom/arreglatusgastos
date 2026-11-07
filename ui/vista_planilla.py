@@ -217,8 +217,27 @@ class VistaPlanilla(QWidget):
         else:
             QTableView.keyPressEvent(self.tabla, event)
 
+    def confirmar_edicion_pendiente(self) -> None:
+        """Guarda la celda que se está escribiendo (si la hay).
+
+        Qt sólo guarda una celda cuando se presiona Enter o se cambia de celda.
+        Si se cierra el programa con una celda a medio escribir, ese dato se
+        perdía. Esto lo confirma antes de cerrar o cambiar de mes.
+        """
+        from PySide6.QtWidgets import QAbstractItemDelegate, QAbstractItemView, QApplication
+
+        if self.tabla.state() != QAbstractItemView.State.EditingState:
+            return
+        editor = QApplication.focusWidget()
+        if editor is not None and self.tabla.isAncestorOf(editor):
+            self.tabla.commitData(editor)
+            # Al guardar, la tabla puede recargarse y cerrar el editor sola
+            if self.tabla.state() == QAbstractItemView.State.EditingState:
+                self.tabla.closeEditor(editor, QAbstractItemDelegate.EndEditHint.NoHint)
+
     def fijar_periodo(self, anio: int, mes: int) -> None:
         """Actualiza el mes/año visualizado."""
+        self.confirmar_edicion_pendiente()
         self.anio_actual = anio
         self.mes_actual = mes
         self.recargar_gastos()
@@ -258,6 +277,7 @@ class VistaPlanilla(QWidget):
                 if texto_busqueda in g.descripcion.lower()
             ]
 
+        self.modelo.fijar_periodo(self.anio_actual, self.mes_actual)
         self.modelo.cargar_gastos(todos_los_gastos)
         self._actualizar_pie(todos_los_gastos)
 

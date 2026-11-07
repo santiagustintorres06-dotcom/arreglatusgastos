@@ -160,6 +160,11 @@ class VentanaPrincipal(QMainWindow):
     def _conectar_eventos(self) -> None:
         self.gasto_service.gasto_cambiado.connect(self._actualizar_barra_estado)
 
+    def closeEvent(self, event) -> None:
+        # Guardar la celda que se esté escribiendo en la planilla antes de cerrar
+        self.vista_planilla.confirmar_edicion_pendiente()
+        super().closeEvent(event)
+
     def _retroceder_mes(self) -> None:
         if self.mes_actual == 1:
             self.mes_actual = 12
