@@ -28,7 +28,7 @@ def _ir_a(v, anio, mes):
 
 
 def _preparar(tarjeta_repo):
-    tid = tarjeta_repo.crear(Tarjeta(nombre="Visa", dia_cierre=25, dia_vencimiento=10))
+    tid = tarjeta_repo.crear(Tarjeta(nombre="Visa", dia_cierre=5, dia_vencimiento=10))  # vence el mismo mes
     cid = tarjeta_repo.crear_consumo(
         ConsumoTarjeta(
             tarjeta_id=tid,

@@ -5,6 +5,12 @@ import pytest
 from models.tarjeta import ConsumoTarjeta, Tarjeta
 from services.tarjeta_service import (
     calcular_saldo_pendiente,
+    deshacer_pago_resumen,
+    fechas_resumen,
+    pagar_resumen,
+    resumen_de_compra,
+    resumenes_tarjeta,
+    ultimo_resumen_con_cuotas,
     fecha_vencimiento_cuota,
     mes_primera_cuota,
     proyectar_cuotas,
@@ -120,25 +126,31 @@ class TestFechaVencimientoCuota:
 # ---------------------------------------------------------------------------
 
 class TestProyectarCuotas:
+    # Tarjeta que cierra el 15 y vence el 5 del mes siguiente
     def test_cantidad_correcta(self):
         tarjeta = _tarjeta(dia_cierre=15, dia_vencimiento=5)
         consumo = _consumo(fecha="2024-01-10", cantidad=6)
         cuotas = proyectar_cuotas(consumo, tarjeta)
         assert len(cuotas) == 6
 
-    def test_primera_cuota_mismo_mes(self):
+    def test_antes_del_cierre_vence_el_mes_siguiente(self):
         tarjeta = _tarjeta(dia_cierre=15, dia_vencimiento=5)
         consumo = _consumo(fecha="2024-01-10", cantidad=3)
         cuotas = proyectar_cuotas(consumo, tarjeta)
-        assert cuotas[0].anio == 2024
-        assert cuotas[0].mes == 1
+        assert (cuotas[0].resumen_anio, cuotas[0].resumen_mes) == (2024, 1)
+        assert date(cuotas[0].anio, cuotas[0].mes, cuotas[0].dia_vencimiento) == date(2024, 2, 5)
 
-    def test_primera_cuota_mes_siguiente_por_cierre(self):
+    def test_despues_del_cierre_pasa_al_resumen_siguiente(self):
         tarjeta = _tarjeta(dia_cierre=15, dia_vencimiento=5)
         consumo = _consumo(fecha="2024-01-20", cantidad=3)
         cuotas = proyectar_cuotas(consumo, tarjeta)
-        assert cuotas[0].anio == 2024
-        assert cuotas[0].mes == 2
+        assert (cuotas[0].resumen_anio, cuotas[0].resumen_mes) == (2024, 2)
+        assert (cuotas[0].anio, cuotas[0].mes) == (2024, 3)
+
+    def test_vencimiento_mayor_al_cierre_vence_el_mismo_mes(self):
+        tarjeta = _tarjeta(dia_cierre=5, dia_vencimiento=15)
+        cuotas = proyectar_cuotas(_consumo(fecha="2024-01-03", cantidad=1), tarjeta)
+        assert date(cuotas[0].anio, cuotas[0].mes, cuotas[0].dia_vencimiento) == date(2024, 1, 15)
 
     def test_pagadas_marcadas_correctamente(self):
         tarjeta = _tarjeta(dia_cierre=15, dia_vencimiento=5)
@@ -159,9 +171,89 @@ class TestProyectarCuotas:
         tarjeta = _tarjeta(dia_cierre=15, dia_vencimiento=5)
         consumo = _consumo(fecha="2024-11-10", cantidad=3)
         cuotas = proyectar_cuotas(consumo, tarjeta)
-        assert cuotas[0].mes == 11
-        assert cuotas[1].mes == 12
-        assert cuotas[2].anio == 2025 and cuotas[2].mes == 1
+        assert (cuotas[0].anio, cuotas[0].mes) == (2024, 12)
+        assert (cuotas[1].anio, cuotas[1].mes) == (2025, 1)
+        assert (cuotas[2].anio, cuotas[2].mes) == (2025, 2)
+
+
+# ---------------------------------------------------------------------------
+# Resúmenes por tarjeta (cada tarjeta con su propio cierre)
+# ---------------------------------------------------------------------------
+
+VISA_MACRO = Tarjeta(id=1, nombre="Visa Macro", dia_cierre=22, dia_vencimiento=5)
+NARANJA = Tarjeta(id=2, nombre="Naranja Visa", dia_cierre=28, dia_vencimiento=10)
+
+
+class TestResumenes:
+    def test_misma_compra_distinto_resumen_segun_tarjeta(self):
+        compra = date(2026, 11, 23)
+        # Visa Macro ya cerró el 22/11 → resumen de diciembre, vence 5/1
+        assert resumen_de_compra(compra, VISA_MACRO) == (2026, 12)
+        assert fechas_resumen(VISA_MACRO, 2026, 12).vencimiento == date(2027, 1, 5)
+        # Naranja cierra el 28/11 → resumen de noviembre, vence 10/12
+        assert resumen_de_compra(compra, NARANJA) == (2026, 11)
+        assert fechas_resumen(NARANJA, 2026, 11).vencimiento == date(2026, 12, 10)
+
+    def test_cierre_31_en_meses_cortos(self):
+        t = Tarjeta(id=3, nombre="X", dia_cierre=31, dia_vencimiento=10)
+        assert fechas_resumen(t, 2027, 2).cierre == date(2027, 2, 28)
+        assert fechas_resumen(t, 2027, 2).vencimiento == date(2027, 3, 10)
+        assert resumen_de_compra(date(2027, 2, 28), t) == (2027, 2)
+        assert resumen_de_compra(date(2027, 3, 1), t) == (2027, 3)
+
+    def test_ajuste_manual(self):
+        ajustes = {(2026, 11): (date(2026, 11, 24), date(2026, 12, 7))}
+        f = fechas_resumen(VISA_MACRO, 2026, 11, ajustes)
+        assert f.ajustado and f.cierre == date(2026, 11, 24) and f.vencimiento == date(2026, 12, 7)
+        # Con el cierre corrido al 24, una compra del 23/11 entra en noviembre
+        assert resumen_de_compra(date(2026, 11, 23), VISA_MACRO, ajustes) == (2026, 11)
+        assert not fechas_resumen(VISA_MACRO, 2026, 12, ajustes).ajustado
+
+    def test_cierre_ajustado_que_cae_en_el_mes_siguiente(self):
+        # El resumen de octubre se corrió al 2/11: una compra del 1/11 entra en octubre
+        ajustes = {(2026, 10): (date(2026, 11, 2), date(2026, 11, 12))}
+        assert resumen_de_compra(date(2026, 11, 1), VISA_MACRO, ajustes) == (2026, 10)
+
+    def test_resumenes_tarjeta_lista_meses_y_totales(self):
+        consumos = [
+            ConsumoTarjeta(id=1, tarjeta_id=1, fecha_compra="2026-11-10", descripcion="Tele",
+                           monto_total_cent=30000, monto_cuota_cent=10000, cantidad_cuotas=3, cuotas_pagadas=1),
+            ConsumoTarjeta(id=2, tarjeta_id=2, fecha_compra="2026-11-10", descripcion="Otra tarjeta",
+                           monto_total_cent=500, monto_cuota_cent=500, cantidad_cuotas=1),
+            ConsumoTarjeta(id=3, tarjeta_id=1, fecha_compra="2026-11-10", descripcion="Cancelado",
+                           monto_total_cent=500, monto_cuota_cent=500, cantidad_cuotas=1, estado="cancelado"),
+        ]
+        res = resumenes_tarjeta(VISA_MACRO, consumos, (2026, 10), (2027, 2))
+        assert [(r.fechas.anio, r.fechas.mes) for r in res] == [
+            (2026, 10), (2026, 11), (2026, 12), (2027, 1), (2027, 2)
+        ]
+        assert [r.total_cent for r in res] == [0, 10000, 10000, 10000, 0]
+        assert res[1].pagado and not res[2].pagado
+        assert ultimo_resumen_con_cuotas(VISA_MACRO, consumos) == (2027, 1)
+
+    def test_pagar_y_deshacer_resumen(self, tarjeta_repo):
+        tid = tarjeta_repo.crear(Tarjeta(nombre="Visa Macro", dia_cierre=22, dia_vencimiento=5))
+        tarjeta = tarjeta_repo.obtener(tid)
+        cid = tarjeta_repo.crear_consumo(
+            ConsumoTarjeta(tarjeta_id=tid, fecha_compra="2026-11-10", descripcion="Tele",
+                           monto_total_cent=30000, monto_cuota_cent=10000, cantidad_cuotas=3)
+        )
+
+        def resumen(mes_offset):
+            consumos = tarjeta_repo.listar_consumos()
+            return resumenes_tarjeta(tarjeta, consumos, (2026, 11), (2027, 1))[mes_offset]
+
+        # Pagar el resumen de diciembre (cuota 2) deja pagadas la 1 y la 2
+        assert pagar_resumen(tarjeta_repo, resumen(1)) == 1
+        assert tarjeta_repo.obtener_consumo(cid).cuotas_pagadas == 2
+        # Pagar el último finaliza el consumo
+        pagar_resumen(tarjeta_repo, resumen(2))
+        c = tarjeta_repo.obtener_consumo(cid)
+        assert c.cuotas_pagadas == 3 and c.estado == "finalizado"
+        # Deshacer el de diciembre vuelve a dejar 1 pagada y el consumo activo
+        deshacer_pago_resumen(tarjeta_repo, resumen(1))
+        c = tarjeta_repo.obtener_consumo(cid)
+        assert c.cuotas_pagadas == 1 and c.estado == "activo"
 
 
 # ---------------------------------------------------------------------------

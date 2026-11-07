@@ -23,6 +23,46 @@ class InfoCuota:
     tarjeta_id: int
     tarjeta_nombre: str
     pagada: bool
+    # Resumen (mes de cierre) al que pertenece la cuota
+    resumen_anio: int = 0
+    resumen_mes: int = 0
+
+
+# Ajustes manuales de un resumen: {(anio, mes_de_cierre): (fecha_cierre, fecha_vencimiento)}
+Ajustes = dict[tuple[int, int], tuple[date, date]]
+
+
+@dataclass(frozen=True)
+class FechasResumen:
+    """Fechas de un resumen de tarjeta, identificado por su mes de cierre."""
+
+    anio: int
+    mes: int
+    cierre: date
+    vencimiento: date
+    ajustado: bool = False
+
+
+@dataclass
+class ResumenTarjeta:
+    """Un resumen (mes de cierre) de una tarjeta con sus cuotas."""
+
+    tarjeta_id: int
+    tarjeta_nombre: str
+    fechas: FechasResumen
+    cuotas: list[InfoCuota]
+
+    @property
+    def total_cent(self) -> int:
+        return sum(c.monto_cent for c in self.cuotas)
+
+    @property
+    def pendiente_cent(self) -> int:
+        return sum(c.monto_cent for c in self.cuotas if not c.pagada)
+
+    @property
+    def pagado(self) -> bool:
+        return bool(self.cuotas) and self.pendiente_cent == 0
 
 
 @dataclass
@@ -83,20 +123,62 @@ def fecha_vencimiento_cuota(
     return date(anio, mes, dia)
 
 
+def fechas_resumen(
+    tarjeta: Tarjeta, anio: int, mes: int, ajustes: Ajustes | None = None
+) -> FechasResumen:
+    """Fechas de cierre y vencimiento del resumen que cierra en (anio, mes).
+
+    - Cierre: el día de cierre de la tarjeta (o el último día si el mes es más corto).
+    - Vencimiento: si el día de vencimiento es MAYOR al de cierre, vence ese mismo
+      mes (ej. cierra 5, vence 15); si es menor o igual, vence el mes siguiente
+      (ej. Visa Macro cierra 22 y vence 5 → el resumen de noviembre vence el 5/12).
+    - Si el usuario ajustó a mano las fechas de ese resumen, se usan esas.
+    """
+    if ajustes and (anio, mes) in ajustes:
+        cierre, venc = ajustes[(anio, mes)]
+        return FechasResumen(anio, mes, cierre, venc, ajustado=True)
+    cierre = date(anio, mes, min(tarjeta.dia_cierre, _ultimo_dia_mes(anio, mes)))
+    if tarjeta.dia_vencimiento > tarjeta.dia_cierre:
+        anio_v, mes_v = anio, mes
+    else:
+        anio_v, mes_v = _sumar_meses(anio, mes, 1)
+    venc = date(anio_v, mes_v, min(tarjeta.dia_vencimiento, _ultimo_dia_mes(anio_v, mes_v)))
+    return FechasResumen(anio, mes, cierre, venc)
+
+
+def resumen_de_compra(
+    fecha_compra: date, tarjeta: Tarjeta, ajustes: Ajustes | None = None
+) -> tuple[int, int]:
+    """(anio, mes) del primer resumen que incluye la compra.
+
+    Es el primer resumen cuyo cierre es igual o posterior a la fecha de compra
+    (una compra hecha justo el día de cierre entra en ese resumen). Se mira
+    también el mes anterior por si un cierre ajustado se corrió a este mes.
+    """
+    for delta in (-1, 0, 1, 2):
+        anio, mes = _sumar_meses(fecha_compra.year, fecha_compra.month, delta)
+        if fechas_resumen(tarjeta, anio, mes, ajustes).cierre >= fecha_compra:
+            return anio, mes
+    return _sumar_meses(fecha_compra.year, fecha_compra.month, 1)
+
+
 def proyectar_cuotas(
     consumo: ConsumoTarjeta,
     tarjeta: Tarjeta,
+    ajustes: Ajustes | None = None,
 ) -> list[InfoCuota]:
     """
     Genera la lista de InfoCuota para todas las cuotas del consumo,
-    indicando cuáles ya están pagadas.
+    indicando cuáles ya están pagadas. La cuota N cae en el resumen
+    N-1 meses posterior al primero; anio/mes/dia son su fecha de vencimiento.
     """
     fecha_compra = date.fromisoformat(consumo.fecha_compra)
-    anio_prim, mes_prim = mes_primera_cuota(fecha_compra, tarjeta.dia_cierre)
+    anio_prim, mes_prim = resumen_de_compra(fecha_compra, tarjeta, ajustes)
 
     cuotas: list[InfoCuota] = []
     for n in range(1, consumo.cantidad_cuotas + 1):
-        venc = fecha_vencimiento_cuota(anio_prim, mes_prim, n, tarjeta.dia_vencimiento)
+        anio_r, mes_r = _sumar_meses(anio_prim, mes_prim, n - 1)
+        venc = fechas_resumen(tarjeta, anio_r, mes_r, ajustes).vencimiento
         cuotas.append(
             InfoCuota(
                 consumo_id=consumo.id,
@@ -110,9 +192,73 @@ def proyectar_cuotas(
                 tarjeta_id=tarjeta.id,
                 tarjeta_nombre=tarjeta.nombre,
                 pagada=(n <= consumo.cuotas_pagadas),
+                resumen_anio=anio_r,
+                resumen_mes=mes_r,
             )
         )
     return cuotas
+
+
+def resumenes_tarjeta(
+    tarjeta: Tarjeta,
+    consumos: list[ConsumoTarjeta],
+    desde: tuple[int, int],
+    hasta: tuple[int, int],
+    ajustes: Ajustes | None = None,
+) -> list[ResumenTarjeta]:
+    """Resúmenes de la tarjeta entre dos meses de cierre (inclusive), aunque estén vacíos."""
+    por_mes: dict[tuple[int, int], list[InfoCuota]] = {}
+    for consumo in consumos:
+        if consumo.tarjeta_id != tarjeta.id or consumo.estado == "cancelado":
+            continue
+        for ic in proyectar_cuotas(consumo, tarjeta, ajustes):
+            por_mes.setdefault((ic.resumen_anio, ic.resumen_mes), []).append(ic)
+
+    resultado: list[ResumenTarjeta] = []
+    anio, mes = desde
+    while (anio, mes) <= hasta:
+        cuotas = sorted(por_mes.get((anio, mes), []), key=lambda c: c.descripcion.lower())
+        resultado.append(
+            ResumenTarjeta(tarjeta.id, tarjeta.nombre, fechas_resumen(tarjeta, anio, mes, ajustes), cuotas)
+        )
+        anio, mes = _sumar_meses(anio, mes, 1)
+    return resultado
+
+
+def ultimo_resumen_con_cuotas(
+    tarjeta: Tarjeta, consumos: list[ConsumoTarjeta], ajustes: Ajustes | None = None
+) -> tuple[int, int] | None:
+    """Mes de cierre del último resumen que todavía tiene cuotas (para saber hasta dónde listar)."""
+    ultimos = [
+        (ic.resumen_anio, ic.resumen_mes)
+        for c in consumos
+        if c.tarjeta_id == tarjeta.id and c.estado != "cancelado"
+        for ic in proyectar_cuotas(c, tarjeta, ajustes)[-1:]
+    ]
+    return max(ultimos) if ultimos else None
+
+
+def pagar_resumen(repo: TarjetaRepo, resumen: ResumenTarjeta) -> int:
+    """Marca como pagadas todas las cuotas del resumen (y las anteriores de cada consumo).
+
+    Devuelve cuántos consumos se actualizaron.
+    """
+    cambios = 0
+    for ic in resumen.cuotas:
+        if not ic.pagada:
+            repo.marcar_pagadas_hasta(ic.consumo_id, ic.numero_cuota)
+            cambios += 1
+    return cambios
+
+
+def deshacer_pago_resumen(repo: TarjetaRepo, resumen: ResumenTarjeta) -> int:
+    """Vuelve a dejar pendientes las cuotas de este resumen (y las posteriores)."""
+    cambios = 0
+    for ic in resumen.cuotas:
+        if ic.pagada:
+            repo.marcar_pagadas_hasta(ic.consumo_id, ic.numero_cuota - 1)
+            cambios += 1
+    return cambios
 
 
 def calcular_saldo_pendiente(consumo: ConsumoTarjeta) -> int:
@@ -134,6 +280,7 @@ def resumen_mes_por_tarjeta(
     (el total completo del resumen, que es lo que se pasa a la Planilla).
     """
     tarjetas = repo.listar(solo_activas=True)
+    ajustes = repo.ajustes_por_tarjeta()
     consumos_activos = repo.listar_consumos(estado="activo") + repo.listar_consumos(
         estado="finalizado"
     )
@@ -146,7 +293,7 @@ def resumen_mes_por_tarjeta(
         for consumo in consumos_tarjeta:
             if consumo.estado == "cancelado":
                 continue
-            proyectadas = proyectar_cuotas(consumo, tarjeta)
+            proyectadas = proyectar_cuotas(consumo, tarjeta, ajustes.get(tarjeta.id))
             for ic in proyectadas:
                 if ic.anio == anio and ic.mes == mes and (incluir_pagadas or not ic.pagada):
                     cuotas_mes.append(ic)
@@ -182,6 +329,7 @@ def proximas_a_vencer(
         hoy = date.today()
 
     tarjetas = {t.id: t for t in repo.listar()}
+    ajustes = repo.ajustes_por_tarjeta()
     consumos = repo.listar_consumos(estado="activo")
 
     alertas: list[InfoCuota] = []
@@ -189,7 +337,7 @@ def proximas_a_vencer(
         tarjeta = tarjetas.get(consumo.tarjeta_id)
         if tarjeta is None:
             continue
-        proyectadas = proyectar_cuotas(consumo, tarjeta)
+        proyectadas = proyectar_cuotas(consumo, tarjeta, ajustes.get(tarjeta.id))
         prox_sin_pagar = [ic for ic in proyectadas if not ic.pagada]
         if not prox_sin_pagar:
             continue
@@ -215,6 +363,7 @@ def proyeccion_6_meses(
 
     meses = [_sumar_meses(hoy.year, hoy.month, i) for i in range(6)]
     tarjetas = {t.id: t for t in repo.listar()}
+    ajustes = repo.ajustes_por_tarjeta()
     consumos = repo.listar_consumos(estado="activo")
 
     resultado: list[tuple[int, int, int]] = []
@@ -224,7 +373,7 @@ def proyeccion_6_meses(
             tarjeta = tarjetas.get(consumo.tarjeta_id)
             if tarjeta is None:
                 continue
-            proyectadas = proyectar_cuotas(consumo, tarjeta)
+            proyectadas = proyectar_cuotas(consumo, tarjeta, ajustes.get(tarjeta.id))
             for ic in proyectadas:
                 if ic.anio == anio and ic.mes == mes and not ic.pagada:
                     total += ic.monto_cent

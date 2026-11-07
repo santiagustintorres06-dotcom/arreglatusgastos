@@ -13,7 +13,7 @@ from datetime import date
 from config import DIAS_AVISO_VENCIMIENTO
 from models.tarjeta import ConsumoTarjeta, Tarjeta
 from repository.tarjeta_repo import TarjetaRepo
-from services.tarjeta_service import InfoCuota, proyectar_cuotas
+from services.tarjeta_service import Ajustes, InfoCuota, proyectar_cuotas
 
 # Estados posibles de un vencimiento
 PENDIENTE = "pendiente"
@@ -73,6 +73,7 @@ def eventos_vencimiento_mes(
     hoy: date,
     meses_volcados: set[tuple[int, int, int]] | None = None,
     dias_aviso: int = DIAS_AVISO_VENCIMIENTO,
+    ajustes_por_tarjeta: dict[int, Ajustes] | None = None,
 ) -> list[EventoVencimiento]:
     """Eventos de vencimiento del mes indicado, uno por tarjeta y fecha.
 
@@ -83,6 +84,7 @@ def eventos_vencimiento_mes(
     - `meses_volcados` contiene (tarjeta_id, anio, mes) ya pasados a la Planilla.
     """
     meses_volcados = meses_volcados or set()
+    ajustes_por_tarjeta = ajustes_por_tarjeta or {}
     tarjetas_activas = {t.id: t for t in tarjetas if t.activa}
 
     agrupados: dict[tuple[int, date], EventoVencimiento] = {}
@@ -92,7 +94,7 @@ def eventos_vencimiento_mes(
         tarjeta = tarjetas_activas.get(consumo.tarjeta_id)
         if tarjeta is None:
             continue
-        for cuota in proyectar_cuotas(consumo, tarjeta):
+        for cuota in proyectar_cuotas(consumo, tarjeta, ajustes_por_tarjeta.get(tarjeta.id)):
             if cuota.anio != anio or cuota.mes != mes:
                 continue
             fecha = date(cuota.anio, cuota.mes, cuota.dia_vencimiento)
@@ -131,4 +133,12 @@ def eventos_vencimiento_mes_repo(
     volcados = {
         (t.id, anio, mes) for t in tarjetas if repo.esta_mes_volcado_planilla(t.id, anio, mes)
     }
-    return eventos_vencimiento_mes(tarjetas, repo.listar_consumos(), anio, mes, hoy, volcados)
+    return eventos_vencimiento_mes(
+        tarjetas,
+        repo.listar_consumos(),
+        anio,
+        mes,
+        hoy,
+        volcados,
+        ajustes_por_tarjeta=repo.ajustes_por_tarjeta(),
+    )

@@ -23,15 +23,22 @@ from PySide6.QtWidgets import (
 
 from config import formatear_moneda, parsear_monto
 from models.tarjeta import ConsumoTarjeta, Tarjeta
-from services.tarjeta_service import fecha_vencimiento_cuota, mes_primera_cuota
+from services.tarjeta_service import Ajustes, fechas_resumen, resumen_de_compra
 
 
 class DialogoConsumo(QDialog):
     """Formulario para registrar un nuevo consumo con tarjeta."""
 
-    def __init__(self, tarjetas: list[Tarjeta], consumo: ConsumoTarjeta | None = None, parent=None):
+    def __init__(
+        self,
+        tarjetas: list[Tarjeta],
+        consumo: ConsumoTarjeta | None = None,
+        parent=None,
+        ajustes_por_tarjeta: dict[int, Ajustes] | None = None,
+    ):
         super().__init__(parent)
         self._tarjetas = tarjetas
+        self._ajustes = ajustes_por_tarjeta or {}
         self._consumo = consumo
         self.setWindowTitle("Nuevo Consumo" if consumo is None else "Editar Consumo")
         self.setMinimumWidth(430)
@@ -152,8 +159,10 @@ class DialogoConsumo(QDialog):
             self.lbl_preview.setText("")
             return
 
-        anio_prim, mes_prim = mes_primera_cuota(fecha_compra, tarjeta.dia_cierre)
-        fecha_venc = fecha_vencimiento_cuota(anio_prim, mes_prim, 1, tarjeta.dia_vencimiento)
+        ajustes = self._ajustes.get(tarjeta.id)
+        anio_prim, mes_prim = resumen_de_compra(fecha_compra, tarjeta, ajustes)
+        fechas = fechas_resumen(tarjeta, anio_prim, mes_prim, ajustes)
+        fecha_venc = fechas.vencimiento
 
         n = self.spin_cuotas.value()
         texto_cuotas = f"{n} cuota{'s' if n > 1 else''}  ·  " if n > 1 else "Pago único  ·  "
@@ -175,7 +184,8 @@ class DialogoConsumo(QDialog):
             texto_cuota = ""
 
         self.lbl_preview.setText(
-            f"{texto_cuotas}Primera cuota: vence el {fecha_venc.strftime('%d/%m/%Y')}  {texto_cuota}"
+            f"{texto_cuotas}Entra en el resumen que cierra el {fechas.cierre.strftime('%d/%m/%Y')}\n"
+            f"Primera cuota: vence el {fecha_venc.strftime('%d/%m/%Y')}  {texto_cuota}"
         )
 
     def _on_cuotas_changed(self) -> None:

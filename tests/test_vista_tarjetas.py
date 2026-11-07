@@ -186,7 +186,7 @@ def test_vista_tarjetas_pasar_a_planilla(
     tarjeta_repo.crear_consumo(
         ConsumoTarjeta(
             tarjeta_id=t_id,
-            fecha_compra="2026-10-05",  # Antes del cierre del 20/10 -> 1ra cuota en 10/2026
+            fecha_compra="2026-10-05",  # Antes del cierre del 20/10 -> resumen de octubre, vence 5/11
             descripcion="Supermercado mensual",
             monto_total_cent=3000000,  # $ 30.000,00
             monto_cuota_cent=3000000,
@@ -199,21 +199,21 @@ def test_vista_tarjetas_pasar_a_planilla(
         gasto_service=gasto_service,
         categoria_repo=categoria_repo,
     )
-    vista.fijar_periodo(2026, 10)
+    vista.fijar_periodo(2026, 11)
 
-    assert not tarjeta_repo.esta_mes_volcado_planilla(t_id, 2026, 10)
+    assert not tarjeta_repo.esta_mes_volcado_planilla(t_id, 2026, 11)
     assert vista.btn_pasar_planilla.isEnabled()
 
     # Pasar a planilla
     vista._pasar_a_planilla()
 
     # Ahora debe figurar como volcado en BD
-    assert tarjeta_repo.esta_mes_volcado_planilla(t_id, 2026, 10)
+    assert tarjeta_repo.esta_mes_volcado_planilla(t_id, 2026, 11)
     assert not vista.btn_pasar_planilla.isEnabled()
     assert "Volcado" in vista.btn_pasar_planilla.text()
 
     # El gasto debe figurar en el servicio de gastos
-    gastos_oct = gasto_service.gasto_repo.listar_por_mes(2026, 10)
+    gastos_oct = gasto_service.gasto_repo.listar_por_mes(2026, 11)
     gastos_tarjeta = [g for g in gastos_oct if "Resumen Tarjeta Visa Crédito" in g.descripcion]
     assert len(gastos_tarjeta) == 1
     assert gastos_tarjeta[0].monto == Decimal("30000.00")
@@ -221,5 +221,5 @@ def test_vista_tarjetas_pasar_a_planilla(
 
     # Si se intenta pasar nuevamente, no duplica
     vista._pasar_a_planilla()
-    gastos_oct_2 = gasto_service.gasto_repo.listar_por_mes(2026, 10)
+    gastos_oct_2 = gasto_service.gasto_repo.listar_por_mes(2026, 11)
     assert len([g for g in gastos_oct_2 if "Resumen Tarjeta Visa Crédito" in g.descripcion]) == 1

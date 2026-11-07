@@ -121,6 +121,7 @@ class VistaTarjetas(QWidget):
         self._mes = date.today().month
         self._consumos_cargados: list[ConsumoTarjeta] = []
         self._tarjetas_map: dict[int, Tarjeta] = {}
+        self._ajustes: dict = {}
         self._ultimo_id_deshecho: int | None = None
 
         self._construir_ui()
@@ -317,6 +318,7 @@ class VistaTarjetas(QWidget):
     def _recargar(self) -> None:
         tarjetas = self._repo.listar()
         self._tarjetas_map = {t.id: t for t in tarjetas}
+        self._ajustes = self._repo.ajustes_por_tarjeta()
 
         self.combo_filtro_tarjeta.blockSignals(True)
         tarjeta_actual_id = self.combo_filtro_tarjeta.currentData()
@@ -365,7 +367,7 @@ class VistaTarjetas(QWidget):
 
             proxima_venc: date | None = None
             if consumo.estado == "activo" and tarjeta:
-                proyectadas = proyectar_cuotas(consumo, tarjeta)
+                proyectadas = proyectar_cuotas(consumo, tarjeta, self._ajustes.get(tarjeta.id))
                 sin_pagar = [ic for ic in proyectadas if not ic.pagada]
                 if sin_pagar:
                     ic = sin_pagar[0]
@@ -515,7 +517,7 @@ class VistaTarjetas(QWidget):
                 "Primero agregá una tarjeta usando el botón '🏦 Gestionar tarjetas'.",
             )
             return
-        dlg = DialogoConsumo(tarjetas_activas, parent=self)
+        dlg = DialogoConsumo(tarjetas_activas, parent=self, ajustes_por_tarjeta=self._ajustes)
         if dlg.exec():
             c = dlg.resultado()
             if c:
@@ -531,7 +533,9 @@ class VistaTarjetas(QWidget):
             QMessageBox.information(self, "No editable", "No se puede editar un consumo cancelado.")
             return
         tarjetas_activas = [t for t in self._tarjetas_map.values() if t.activa]
-        dlg = DialogoConsumo(tarjetas_activas, consumo=consumo, parent=self)
+        dlg = DialogoConsumo(
+            tarjetas_activas, consumo=consumo, parent=self, ajustes_por_tarjeta=self._ajustes
+        )
         if dlg.exec():
             c = dlg.resultado()
             if c:
