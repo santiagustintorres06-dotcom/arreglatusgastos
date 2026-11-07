@@ -178,9 +178,13 @@ def main() -> None:
         gasto_repo=gasto_repo,
         tarjeta_repo=tarjeta_repo,
     )
+    modo_prueba = bool(os.environ.get("GASTOS_DATA_DIR"))
+    if modo_prueba:
+        ventana.setWindowTitle(ventana.windowTitle() + "  —  🧪 MODO PRUEBA (datos de ejemplo)")
     ventana.show()
     # Revisar, ya con la ventana abierta, si hay otra carpeta del programa con datos
-    QTimer.singleShot(400, lambda: avisar_otras_copias(ventana))
+    if not modo_prueba:
+        QTimer.singleShot(400, lambda: avisar_otras_copias(ventana))
 
     # 7. Ejecutar loop de eventos
     codigo_salida = app.exec()

@@ -41,3 +41,6 @@ logs/
 .vscode/
 .idea/
 *.swp
+
+# Datos de prueba (probar_demo.bat)
+demo_datos/
