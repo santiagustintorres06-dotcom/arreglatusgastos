@@ -50,7 +50,9 @@ def tarjeta_repo(db_conn: sqlite3.Connection):
 
 
 @pytest.fixture
-def gasto_service(gasto_repo: GastoRepo, categoria_repo: CategoriaRepo):
+def gasto_service(qapp, gasto_repo: GastoRepo, categoria_repo: CategoriaRepo):
+    # Depende de qapp: GastoService crea una QCoreApplication si no hay ninguna,
+    # y eso hace fallar a los tests posteriores que crean ventanas.
     return GastoService(gasto_repo, categoria_repo)
 
 
