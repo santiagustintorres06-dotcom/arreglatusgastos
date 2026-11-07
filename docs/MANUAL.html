@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual — Organizador de Gastos Familiares</title>
+<style>
+  :root {
+    --texto: #2c3e50; --suave: #5d6d7e; --borde: #d5dbdb; --fondo: #f4f6f8;
+    --azul: #2471a3; --verde: #1e8449; --naranja: #d35400; --rojo: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto);
+         font: 17px/1.6 "Segoe UI", Arial, sans-serif; }
+  header { background: #2c3e50; color: #fff; padding: 28px 16px; }
+  header h1 { margin: 0 auto; max-width: 900px; font-size: 1.8em; }
+  header p { margin: 6px auto 0; max-width: 900px; color: #d6eaf8; }
+  main { max-width: 900px; margin: 0 auto; padding: 16px; }
+  section { background: #fff; border: 1px solid var(--borde); border-radius: 10px;
+            padding: 8px 24px 18px; margin: 18px 0; }
+  h2 { color: var(--azul); border-bottom: 3px solid #27ae60; padding-bottom: 4px; }
+  h3 { margin-bottom: 4px; }
+  nav ol { columns: 2; padding-left: 22px; }
+  nav a { color: var(--azul); text-decoration: none; }
+  nav a:hover { text-decoration: underline; }
+  .paso { background: #eaf2f8; border-left: 5px solid var(--azul); border-radius: 6px;
+          padding: 10px 14px; margin: 10px 0; }
+  .ojo { background: #fdf2e9; border-left: 5px solid var(--naranja); border-radius: 6px;
+         padding: 10px 14px; margin: 10px 0; }
+  .peligro { background: #fdedec; border-left: 5px solid var(--rojo); border-radius: 6px;
+             padding: 10px 14px; margin: 10px 0; }
+  kbd { background: #fff; border: 1px solid #aab7b8; border-bottom-width: 3px; border-radius: 4px;
+        padding: 0 6px; font-family: Consolas, monospace; font-size: .9em; }
+  code { background: #f2f3f4; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: .95em; }
+  th { background: #34495e; color: #fff; text-align: left; padding: 7px 10px; }
+  td { border-bottom: 1px solid var(--borde); padding: 7px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8f9f9; }
+  .chip { display: inline-block; color: #fff; font-weight: 700; border-radius: 4px; padding: 0 8px; }
+  .c-azul { background: var(--azul); } .c-naranja { background: var(--naranja); }
+  .c-rojo { background: var(--rojo); } .c-verde { background: var(--verde); }
+  .tecnico { border-color: #aed6f1; }
+  .tecnico h2 { color: #1b4f72; }
+  @media (max-width: 640px) { nav ol { columns: 1; } section { padding: 6px 14px 14px; } }
+  @media print { body { background: #fff; } section { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>📒 Organizador de Gastos Familiares — Manual</h1>
+  <p>Cómo se usa, qué hace cada parte y cómo resolver los problemas más comunes.</p>
+</header>
+<main>
+
+<nav>
+  <section>
+    <h2>Contenido</h2>
+    <ol>
+      <li><a href="#inicio">Para empezar</a></li>
+      <li><a href="#pantalla">La pantalla principal</a></li>
+      <li><a href="#planilla">📋 Planilla</a></li>
+      <li><a href="#calendario">📅 Calendario</a></li>
+      <li><a href="#tarjetas">💳 Tarjetas / Cuotas</a></li>
+      <li><a href="#resumenes">🧾 Resúmenes de tarjeta</a></li>
+      <li><a href="#planilla-tarjetas">Pasar tarjetas a la Planilla</a></li>
+      <li><a href="#avisos">Avisos y opciones</a></li>
+      <li><a href="#excel">Exportar a Excel</a></li>
+      <li><a href="#atajos">Atajos de teclado</a></li>
+      <li><a href="#datos">Dónde se guardan los datos y respaldos</a></li>
+      <li><a href="#problemas">Problemas frecuentes</a></li>
+      <li><a href="#prueba">Probar sin tocar los datos</a></li>
+      <li><a href="#tecnico">Parte técnica (para quien mantiene el programa)</a></li>
+    </ol>
+  </section>
+</nav>
+
+<section id="inicio">
+  <h2>1. Para empezar</h2>
+  <div class="paso">
+    <b>Abrir el programa:</b> doble clic en <code>GastosFamilia.exe</code>, dentro de la carpeta
+    <code>GastosFamilia</code>. No hace falta instalar nada.
+  </div>
+  <div class="ojo">
+    <b>Importante:</b> usá <b>siempre la misma carpeta</b>. Cada carpeta GastosFamilia guarda sus
+    propios datos. Si hay dos copias (por ejemplo una en el Escritorio y otra en Descargas), lo que se
+    carga en una no aparece en la otra. Abajo a la izquierda de la ventana dice
+    <b>📁 Datos en: …</b>: ahí se ve qué carpeta se está usando.
+  </div>
+  <p>Todo se guarda solo, en el momento. No hay botón "Guardar" general: cuando cargás o cambiás algo,
+     ya quedó guardado.</p>
+</section>
+
+<section id="pantalla">
+  <h2>2. La pantalla principal</h2>
+  <ul>
+    <li><b>Arriba:</b> el mes que se está viendo, con <b>◀ Mes anterior</b>, <b>Mes actual</b> y
+        <b>Mes siguiente ▶</b>. Las tres pestañas muestran siempre ese mismo mes.
+        A la derecha están <b>⚙️ Opciones</b> y <b>❓ Ayuda</b> (abre este manual).</li>
+    <li><b>Aviso de vencimientos</b> (franja naranja o roja): aparece sólo si hay resúmenes de tarjeta
+        vencidos sin pagar o que vencen en los próximos días. Se puede cerrar con <b>✕</b> o ir directo a
+        <b>🧾 Ver resúmenes</b>.</li>
+    <li><b>Pestañas:</b> 📋 Planilla, 📅 Calendario y 💳 Tarjetas / Cuotas.</li>
+    <li><b>Abajo a la derecha:</b> el <b>total real del mes</b>, es decir, lo que sale de la casa:
+        <i>Planilla + 💳 Tarjetas (que todavía no se pasaron a la Planilla) = Total real del mes</i>.</li>
+  </ul>
+</section>
+
+<section id="planilla">
+  <h2>3. 📋 Planilla (gastos del mes)</h2>
+  <h3>Cargar un gasto</h3>
+  <ul>
+    <li><b>Con el botón ➕ Agregar gasto</b> (o <kbd>Ctrl</kbd>+<kbd>N</kbd>): se abre un formulario.
+        Completá fecha, categoría y monto y apretá <b>Guardar</b> (o <kbd>Enter</kbd>).</li>
+    <li><b>En la última fila (la del "+")</b>, como en Excel: hacé doble clic en una celda, escribí y
+        apretá <kbd>Enter</kbd>. El gasto se guarda en cuanto tiene monto. La fecha propuesta es hoy
+        (o el día 1 si estás mirando otro mes).</li>
+  </ul>
+  <h3>Cambiar o borrar</h3>
+  <ul>
+    <li>Doble clic sobre una celda para corregirla, o doble clic en la fila para abrir el formulario.</li>
+    <li>Para borrar: seleccioná la fila y apretá <b>🗑️ Eliminar</b> o la tecla <kbd>Supr</kbd>.
+        Siempre pide confirmación.</li>
+    <li>Clic derecho sobre una fila: menú con editar y eliminar.</li>
+  </ul>
+  <h3>Buscar</h3>
+  <p>Filtrá por categoría o escribí parte de la descripción en el buscador.</p>
+</section>
+
+<section id="calendario">
+  <h2>4. 📅 Calendario</h2>
+  <ul>
+    <li>Cada día muestra cuánto se gastó. Cuanto más intenso el rojo, más gasto ese día.</li>
+    <li>Los días en que <b>vence una tarjeta</b> tienen una franja con 💳 y el total del resumen,
+        con un color que indica su estado:
+      <ul>
+        <li><span class="chip c-azul">Pendiente</span> falta para que venza.</li>
+        <li><span class="chip c-naranja">Próximo a vencer</span> vence en pocos días (configurable en ⚙️).</li>
+        <li><span class="chip c-rojo">Vencido</span> ya pasó la fecha y falta pagar.</li>
+        <li><span class="chip c-verde">Pagado</span> está todo pagado.</li>
+      </ul>
+    </li>
+    <li><b>Clic en un día:</b> a la derecha aparecen los gastos de ese día y, si vence una tarjeta,
+        el detalle: cada compra, qué número de cuota es (ej. <i>cuota 3/6</i>) y su monto.</li>
+    <li>Si avanzás de mes se ven las cuotas futuras, hasta que se terminen.</li>
+    <li>Arriba: <i>Gastos + Tarjetas = Total real</i> del mes.</li>
+  </ul>
+</section>
+
+<section id="tarjetas">
+  <h2>5. 💳 Tarjetas / Cuotas</h2>
+  <h3>Cargar una tarjeta (una sola vez)</h3>
+  <div class="paso">
+    <b>🏦 Gestionar tarjetas → Nueva</b>. Poné el nombre, el <b>día de cierre</b> y el
+    <b>día de vencimiento</b> que figuran en el resumen del banco. El formulario explica en palabras
+    cómo va a funcionar, por ejemplo:<br>
+    <i>"Cierra el día 22 de cada mes y vence el día 5 del mes siguiente. Ejemplo: una compra de hoy
+    entra en el resumen que cierra el 22/11 y se paga el 05/12/2026."</i>
+  </div>
+  <p>Cada tarjeta tiene sus propias fechas. Por ejemplo, <b>Visa Macro</b> cierra el 22 y
+     <b>Naranja Visa</b> el 28: una compra del 23/11 con Visa Macro se paga en enero, y con Naranja
+     se paga en diciembre. El programa lo calcula solo.</p>
+  <p><b>Regla:</b> si el día de vencimiento es <i>mayor</i> que el de cierre, se paga ese mismo mes;
+     si es <i>menor o igual</i>, se paga el mes siguiente. Una compra hecha <i>el mismo día del cierre</i>
+     entra en ese resumen.</p>
+
+  <h3>Cargar una compra (consumo)</h3>
+  <ul>
+    <li><b>➕ Nuevo consumo</b> (o <kbd>Ctrl</kbd>+<kbd>N</kbd> en esta pestaña).</li>
+    <li>Elegí la tarjeta, la fecha de compra, la descripción y la cantidad de cuotas
+        (1 = un solo pago).</li>
+    <li>Podés cargar el <b>monto total</b> (calcula la cuota) o el <b>monto de cada cuota</b>
+        (calcula el total). Si la compra tiene interés, cargá también el precio de contado.</li>
+    <li>Abajo el formulario muestra en qué resumen entra y <b>cuándo vence la primera cuota</b>.</li>
+  </ul>
+
+  <h3>La tabla de consumos</h3>
+  <p>Muestra para cada compra: cuotas pagadas y restantes, saldo pendiente, próximo vencimiento y
+     estado. Los colores: <span class="chip c-rojo">rojo</span> vencido,
+     <span class="chip c-naranja">naranja</span> vence pronto, verde finalizado, gris cancelado.
+     Se puede filtrar por tarjeta y estado, buscar por descripción y ordenar tocando el título de
+     cada columna.</p>
+
+  <h3>Botones</h3>
+  <table>
+    <tr><th>Botón</th><th>Qué hace</th></tr>
+    <tr><td>✅ Pagar cuota</td><td>Marca pagada una cuota del consumo seleccionado.</td></tr>
+    <tr><td>↩️ Deshacer pago</td><td>Vuelve atrás el último pago marcado (por si fue un error).</td></tr>
+    <tr><td>⏩ Liquidar todo</td><td>Marca todas las cuotas que faltan como pagadas (cuando se cancela la deuda antes).</td></tr>
+    <tr><td>❌ Cancelar</td><td>Anula el consumo (no se borra: queda guardado como "cancelado" y se puede consultar con el filtro de estado).</td></tr>
+    <tr><td>✏️ Editar</td><td>Corrige los datos del consumo (o <kbd>Enter</kbd> / doble clic sobre la fila).</td></tr>
+    <tr><td>🧾 Resúmenes</td><td>Ver y manejar los resúmenes mes a mes (ver siguiente sección).</td></tr>
+    <tr><td>📊 Próximos 6 meses</td><td>Gráfico de barras con cuánto hay que pagar de tarjetas cada mes, y en qué mes "se libera plata".</td></tr>
+  </table>
+
+  <h3>Panel de arriba</h3>
+  <p><b>A pagar este mes</b> (por tarjeta), <b>Deuda total pendiente</b> y, si cargaste el límite de
+     la tarjeta, <b>Límite disponible</b>.</p>
+</section>
+
+<section id="resumenes">
+  <h2>6. 🧾 Resúmenes de tarjeta</h2>
+  <p>Muestra cada resumen de la tarjeta elegida: mes, fecha de cierre, fecha de vencimiento, total,
+     cuánto falta pagar y estado. Abajo aparece el detalle de las compras de ese resumen.</p>
+  <ul>
+    <li><b>✅ Marcar resumen pagado:</b> cuando se paga la tarjeta, marca de una vez todas las cuotas
+        de ese resumen.</li>
+    <li><b>↩️ Deshacer pago:</b> por si se marcó por error.</li>
+    <li><b>📅 Cambiar fechas de este resumen:</b> los bancos a veces corren el cierre unos días.
+        Si en el resumen impreso o en la app del banco figura otra fecha, corregila acá. Sólo cambia
+        ese mes (queda marcado con ✏️). Con <b>↺ Volver a las habituales</b> se deshace.</li>
+  </ul>
+</section>
+
+<section id="planilla-tarjetas">
+  <h2>7. Pasar las tarjetas a la Planilla</h2>
+  <p>En la pestaña Tarjetas, el botón <b>📥 Pasar a gastos del mes</b> anota en la Planilla un gasto
+     por cada tarjeta con el total del resumen del mes (con la fecha de vencimiento y medio de pago
+     "Crédito").</p>
+  <ul>
+    <li><b>No se duplica:</b> si ese mes ya se pasó, el botón dice <i>✅ Volcado en Planilla</i>.</li>
+    <li>Una vez pasado, el Calendario y el total real <b>no lo cuentan dos veces</b>.</li>
+    <li>Si borrás ese gasto de la Planilla, el mes queda libre para volver a pasarlo.</li>
+  </ul>
+</section>
+
+<section id="avisos">
+  <h2>8. Avisos y opciones (⚙️)</h2>
+  <p>Al abrir el programa, si hay vencimientos de tarjeta en los próximos días o vencidos sin pagar,
+     aparece la franja de aviso arriba. Desaparece sola cuando se pagan.</p>
+  <p>En <b>⚙️ Opciones</b> se elige con cuántos días de anticipación avisar (por defecto 5) y si se
+     quiere ver el aviso.</p>
+</section>
+
+<section id="excel">
+  <h2>9. Exportar a Excel</h2>
+  <p>En la Planilla, <b>📤 Exportar a Excel</b>. El archivo tiene tres hojas:</p>
+  <ul>
+    <li><b>Gastos:</b> todos los gastos del mes con su total.</li>
+    <li><b>Resumen por Categoría:</b> cuánto se gastó en cada categoría y qué porcentaje es.</li>
+    <li><b>Tarjetas:</b> las cuotas que vencen en el mes (cuota n/N, estado, si ya está en la
+        Planilla), el detalle de todos los consumos y la proyección de los próximos 6 meses.</li>
+  </ul>
+</section>
+
+<section id="atajos">
+  <h2>10. Atajos de teclado</h2>
+  <table>
+    <tr><th>Teclas</th><th>Qué hace</th></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>Nuevo gasto (Planilla o Calendario) o nuevo consumo (Tarjetas).</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd></td><td>Ir a Planilla / Calendario / Tarjetas.</td></tr>
+    <tr><td><kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd></td><td>Mes anterior / mes siguiente.</td></tr>
+    <tr><td><kbd>Enter</kbd></td><td>Confirma el formulario abierto. En la tabla de Tarjetas, edita el consumo seleccionado.</td></tr>
+    <tr><td><kbd>Supr</kbd></td><td>Eliminar el gasto seleccionado (pide confirmación).</td></tr>
+    <tr><td><kbd>F1</kbd></td><td>Abrir este manual.</td></tr>
+  </table>
+</section>
+
+<section id="datos">
+  <h2>11. Dónde se guardan los datos y los respaldos</h2>
+  <ul>
+    <li><b>Datos:</b> <code>GastosFamilia\data\gastos.db</code> (un solo archivo con todo).</li>
+    <li><b>Respaldo diario:</b> cada vez que se abre el programa se guarda una copia en
+        <code>GastosFamilia\data\backups\gastos_AAAAMMDD.db</code> (se guardan los últimos 30 días).</li>
+    <li><b>Respaldo al cerrar:</b> <code>gastos_ultimo_cierre.db</code>, con cómo quedó todo la última vez
+        que se cerró el programa.</li>
+    <li><b>Registro de errores:</b> <code>GastosFamilia\logs\app.log</code>.</li>
+  </ul>
+  <div class="paso"><b>Recuperar datos de un respaldo:</b> cerrá el programa, renombrá
+    <code>data\gastos.db</code> a <code>gastos_viejo.db</code>, copiá el respaldo elegido a
+    <code>data\</code> y renombralo a <code>gastos.db</code>. Abrí el programa.</div>
+</section>
+
+<section id="problemas">
+  <h2>12. Problemas frecuentes</h2>
+  <table>
+    <tr><th>Qué pasa</th><th>Qué hacer</th></tr>
+    <tr><td>"Cargué cosas y no aparecen"</td>
+        <td>Mirá abajo a la izquierda <b>📁 Datos en:</b>. Probablemente se abrió otra copia del
+            programa. Si existe otra carpeta con datos, el programa avisa al abrir y dice dónde está.
+            Revisá también que estés mirando el <b>mes correcto</b> (arriba).</td></tr>
+    <tr><td>Aviso "Atención: los datos no se van a guardar"</td>
+        <td>El programa se abrió desde dentro de un archivo .zip. Copiá la carpeta GastosFamilia
+            completa al Escritorio y abrilo desde ahí.</td></tr>
+    <tr><td>Una cuota vence en una fecha distinta a la del banco</td>
+        <td>Revisá el día de cierre y vencimiento de la tarjeta (🏦 Gestionar tarjetas). Si sólo ese mes
+            el banco cambió las fechas, usá 🧾 Resúmenes → 📅 Cambiar fechas de este resumen.</td></tr>
+    <tr><td>Marqué una cuota como pagada por error</td>
+        <td>↩️ Deshacer pago (en la tabla de consumos o en 🧾 Resúmenes).</td></tr>
+    <tr><td>Cargué mal un consumo</td>
+        <td>✏️ Editar. Si no correspondía, ❌ Cancelar (queda guardado como cancelado; se ve con el
+            filtro "Cancelados").</td></tr>
+    <tr><td>Pasé la tarjeta a la Planilla y el monto estaba mal</td>
+        <td>Borrá ese gasto de la Planilla, corregí los consumos y volvé a apretar
+            📥 Pasar a gastos del mes.</td></tr>
+    <tr><td>Apareció un mensaje "Ocurrió un problema"</td>
+        <td>Los datos guardados antes siguen a salvo. Anotá qué estabas haciendo y avisá a quien
+            mantiene el programa; el detalle queda en <code>logs\app.log</code>.</td></tr>
+    <tr><td>El programa no abre</td>
+        <td>Verificá que se copió la carpeta GastosFamilia <b>completa</b> (con <code>_internal</code>),
+            no sólo el .exe.</td></tr>
+  </table>
+</section>
+
+<section id="prueba">
+  <h2>13. Probar sin tocar los datos reales</h2>
+  <p>Doble clic en <b>Probar con datos de ejemplo.bat</b> (junto al .exe). Se abre el programa con
+     datos inventados y el título dice <b>🧪 MODO PRUEBA</b>. Todo lo que se haga ahí queda en la
+     carpeta <code>demo_datos</code> y no afecta los datos reales.</p>
+</section>
+
+<section id="tecnico" class="tecnico">
+  <h2>14. Parte técnica (para quien mantiene el programa)</h2>
+
+  <h3>Tecnología</h3>
+  <p>Python 3 + PySide6 (Qt), base SQLite en un solo archivo, openpyxl para Excel y PyInstaller para
+     el portable. No hay dependencias pesadas: el gráfico se dibuja con <code>QPainter</code>.</p>
+
+  <h3>Organización del código</h3>
+  <table>
+    <tr><th>Carpeta / archivo</th><th>Responsabilidad</th></tr>
+    <tr><td><code>main.py</code></td><td>Arranque: carpetas, log, manejo global de errores, respaldo diario (antes de migrar), migración, ventana, respaldo al cerrar, modo prueba (<code>--prueba</code>), aviso de otras copias.</td></tr>
+    <tr><td><code>paths.py</code></td><td>Rutas portables (junto al .exe). <code>GASTOS_DATA_DIR</code> permite otra carpeta de datos.</td></tr>
+    <tr><td><code>db/conexion.py</code>, <code>db/schema.sql</code></td><td>Esquema con <code>CREATE TABLE IF NOT EXISTS</code> (migración segura), respaldos con la API de SQLite.</td></tr>
+    <tr><td><code>repository/</code></td><td>Acceso a datos (SQL): gastos, categorías, tarjetas/consumos/ajustes, preferencias.</td></tr>
+    <tr><td><code>services/tarjeta_service.py</code></td><td>Cálculos puros de tarjetas: fechas de resumen, primer resumen de una compra, proyección de cuotas, saldos, resúmenes, pagar/deshacer resumen.</td></tr>
+    <tr><td><code>services/calendario_tarjetas.py</code></td><td>Vencimientos por mes para el Calendario, estado (pendiente/próximo/vencido/pagado) y total sin duplicar lo pasado a la Planilla.</td></tr>
+    <tr><td><code>services/alertas.py</code></td><td>Avisos de vencidos y próximos.</td></tr>
+    <tr><td><code>services/ubicacion_datos.py</code></td><td>Detecta otras carpetas del programa con datos.</td></tr>
+    <tr><td><code>services/export_service.py</code></td><td>Excel (Gastos, Resumen por Categoría, Tarjetas) y CSV.</td></tr>
+    <tr><td><code>services/datos_demo.py</code></td><td>Datos de ejemplo del modo prueba.</td></tr>
+    <tr><td><code>ui/</code></td><td>Ventana, pestañas, diálogos, gráfico y hoja de estilos (<code>ui/estilo.py</code>).</td></tr>
+    <tr><td><code>tests/</code></td><td>Pruebas automáticas (pytest).</td></tr>
+    <tr><td><code>herramientas/construir_portable.py</code></td><td>Genera el portable conservando los datos.</td></tr>
+  </table>
+
+  <h3>Base de datos</h3>
+  <table>
+    <tr><th>Tabla</th><th>Contenido</th></tr>
+    <tr><td><code>gasto</code>, <code>categoria</code>, <code>miembro</code></td><td>Planilla (montos en centavos).</td></tr>
+    <tr><td><code>tarjeta</code></td><td>Nombre, día de cierre, día de vencimiento, límite, activa.</td></tr>
+    <tr><td><code>consumo_tarjeta</code></td><td>Compras: fecha, total, cuota, cantidad de cuotas, cuotas pagadas, precio de contado, estado (activo/finalizado/cancelado = borrado lógico).</td></tr>
+    <tr><td><code>resumen_tarjeta_mes</code></td><td>Qué resumen (tarjeta, mes de pago) ya se pasó a la Planilla y con qué gasto: evita duplicados.</td></tr>
+    <tr><td><code>ajuste_resumen_tarjeta</code></td><td>Fechas de cierre/vencimiento corregidas a mano para un resumen puntual.</td></tr>
+    <tr><td><code>preferencia</code></td><td>Opciones (días de aviso, mostrar avisos).</td></tr>
+  </table>
+  <p>Las cuotas <b>no se guardan una por una</b>: se calculan a partir del consumo (única fuente de
+     verdad). Por eso Calendario, Tarjetas, avisos y Excel siempre coinciden.</p>
+
+  <h3>Reglas de cálculo (funciones puras, con tests)</h3>
+  <ul>
+    <li><code>fechas_resumen(tarjeta, anio, mes, ajustes)</code>: cierre = día de cierre (o último día
+        del mes); vencimiento el mismo mes si <code>dia_vencimiento &gt; dia_cierre</code>, si no el mes
+        siguiente (ajustado a fin de mes: 31 → 30/28/29). Si hay ajuste manual, usa ese.</li>
+    <li><code>resumen_de_compra(fecha, tarjeta, ajustes)</code>: primer resumen cuyo cierre es ≥ fecha
+        de compra (compra en el día de cierre entra en ese resumen).</li>
+    <li><code>proyectar_cuotas(consumo, tarjeta, ajustes)</code>: la cuota N cae en el resumen N−1
+        meses después del primero; marca pagada si <code>N ≤ cuotas_pagadas</code>.</li>
+    <li><code>calcular_saldo_pendiente(consumo)</code> = cuota × cuotas restantes.</li>
+    <li><code>eventos_vencimiento_mes(...)</code>: agrupa cuotas por tarjeta y fecha de vencimiento y
+        calcula el estado con <code>estado_vencimiento(fecha, hay_pendientes, hoy, dias_aviso)</code>.</li>
+    <li><code>total_tarjetas_sin_volcar_cent(eventos)</code>: suma sólo lo que no se pasó a la Planilla.</li>
+  </ul>
+  <p>Los tests cubren fin de mes (día 31), febrero (incluido bisiesto), cambio de año, compra en el día
+     de cierre, tarjetas con distinto cierre y ajustes manuales.</p>
+
+  <h3>Actualización automática entre pestañas</h3>
+  <p><code>GastoService.gasto_cambiado</code> se emite al crear/editar/borrar gastos;
+     <code>VistaTarjetas.datos_cambiados</code> al tocar tarjetas o consumos. La ventana principal
+     conecta esas señales al Calendario, al total real y al aviso.</p>
+
+  <h3>Problemas resueltos y la función que lo resuelve</h3>
+  <table>
+    <tr><th>Problema</th><th>Solución (dónde)</th></tr>
+    <tr><td>Generar el portable borraba <code>dist\GastosFamilia\data</code> (PyInstaller limpia la carpeta).</td>
+        <td><code>herramientas/construir_portable.py</code>: respalda <code>data</code>, compila y la restaura. Usar siempre <code>build.bat</code>.</td></tr>
+    <tr><td>Dos carpetas del programa → datos "perdidos".</td>
+        <td><code>services/ubicacion_datos.otras_copias_con_datos()</code> + aviso en <code>main.avisar_otras_copias()</code>; ruta visible en la barra inferior.</td></tr>
+    <tr><td>Abrir desde un .zip guarda en una carpeta temporal.</td>
+        <td><code>main._carpeta_es_temporal()</code> muestra un aviso.</td></tr>
+    <tr><td>Gasto duplicado en la fila rápida (al borrar el "repetido" se borraba el real).</td>
+        <td><code>ModeloTablaGastos._set_data_nueva_fila()</code> no agrega si ya está.</td></tr>
+    <tr><td>Celda a medio escribir se perdía al cerrar.</td>
+        <td><code>VistaPlanilla.confirmar_edicion_pendiente()</code>, llamado en <code>closeEvent</code> y al cambiar de mes.</td></tr>
+    <tr><td>No se podía borrar un gasto pasado desde tarjetas (clave foránea).</td>
+        <td><code>GastoRepo.eliminar()</code> libera <code>resumen_tarjeta_mes</code> en la misma transacción.</td></tr>
+    <tr><td>Vencimiento antes de la compra (tarjetas que vencen el mes siguiente).</td>
+        <td><code>fechas_resumen()</code> con la regla vencimiento ≤ cierre → mes siguiente.</td></tr>
+    <tr><td>El banco corre el cierre algún mes.</td>
+        <td>Tabla <code>ajuste_resumen_tarjeta</code> + <code>DialogoFechasResumen</code>.</td></tr>
+    <tr><td>Contar dos veces un resumen ya pasado a la Planilla.</td>
+        <td><code>resumen_tarjeta_mes</code> + <code>total_tarjetas_sin_volcar_cent()</code>.</td></tr>
+    <tr><td>Errores que cerraban el programa sin explicación.</td>
+        <td><code>sys.excepthook = main._manejador_errores</code>: anota en el log y muestra un mensaje claro.</td></tr>
+  </table>
+
+  <h3>Comandos útiles</h3>
+  <table>
+    <tr><th>Para</th><th>Comando (en la carpeta del proyecto)</th></tr>
+    <tr><td>Correr el programa</td><td><code>.venv\Scripts\python.exe main.py</code></td></tr>
+    <tr><td>Modo prueba (desde el código)</td><td><code>probar_demo.bat</code> (o <code>--nueva-prueba</code> para empezar de cero)</td></tr>
+    <tr><td>Correr los tests</td><td><code>.venv\Scripts\python.exe -m pytest -q</code></td></tr>
+    <tr><td>Generar el portable</td><td><code>build.bat</code> → queda en <code>dist\GastosFamilia</code></td></tr>
+  </table>
+  <div class="peligro"><b>Al actualizar la PC de otra persona:</b> copiá la carpeta nueva <b>sin
+    pisar</b> su <code>data\</code>. Nunca ejecutes PyInstaller a mano sobre una carpeta en uso.</div>
+</section>
+
+</main>
+</body>
+</html>

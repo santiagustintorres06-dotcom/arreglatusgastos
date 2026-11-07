@@ -3,6 +3,9 @@
   Versión portable — no requiere instalar nada
 ========================================================
 
+MANUAL COMPLETO: abrí MANUAL.html (doble clic) o apretá F1 / "❓ Ayuda"
+dentro del programa.
+
 CÓMO USAR:
 ----------
 1. Copiá la carpeta "GastosFamilia" completa a donde quieras

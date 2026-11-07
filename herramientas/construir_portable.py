@@ -70,6 +70,7 @@ def main() -> int:
         print("Datos restaurados en dist\\GastosFamilia\\data")
 
     shutil.copy2(RAIZ / "README_INSTALACION.txt", DIST / "README_INSTALACION.txt")
+    shutil.copy2(RAIZ / "docs" / "MANUAL.html", DIST / "MANUAL.html")
     shutil.copy2(RAIZ / "herramientas" / "Probar con datos de ejemplo.bat", DIST / "Probar con datos de ejemplo.bat")
 
     print("\nListo. Portable en:", DIST)
