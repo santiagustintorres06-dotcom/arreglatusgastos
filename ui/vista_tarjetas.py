@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from config import formatear_moneda
+from config import DIAS_AVISO_VENCIMIENTO, formatear_moneda
 from models.tarjeta import ConsumoTarjeta, Tarjeta
 from repository.categoria_repo import CategoriaRepo
 from repository.tarjeta_repo import TarjetaRepo
@@ -123,6 +123,7 @@ class VistaTarjetas(QWidget):
         self._tarjetas_map: dict[int, Tarjeta] = {}
         self._ajustes: dict = {}
         self._ultimo_id_deshecho: int | None = None
+        self.dias_aviso = DIAS_AVISO_VENCIMIENTO
 
         self._construir_ui()
         self._conectar_atajos()
@@ -275,6 +276,10 @@ class VistaTarjetas(QWidget):
         )
         self.btn_resumenes.clicked.connect(self._abrir_resumenes)
 
+        self.btn_proyeccion = QPushButton("📊 Próximos 6 meses")
+        self.btn_proyeccion.setToolTip("Gráfico con cuánto hay que pagar de tarjetas cada mes")
+        self.btn_proyeccion.clicked.connect(self._abrir_proyeccion)
+
         self.btn_pagar_cuota = QPushButton("✅ Pagar cuota")
         self.btn_pagar_cuota.setToolTip("Registra el pago de 1 cuota en el consumo seleccionado")
         self.btn_pagar_cuota.clicked.connect(self._marcar_cuota_pagada)
@@ -298,6 +303,7 @@ class VistaTarjetas(QWidget):
         for b in [
             self.btn_nuevo,
             self.btn_resumenes,
+            self.btn_proyeccion,
             self.btn_pagar_cuota,
             self.btn_deshacer,
             self.btn_adelantar,
@@ -430,7 +436,7 @@ class VistaTarjetas(QWidget):
         delta = (venc - hoy).days
         if delta < 0:
             return COLOR_VENCIDO
-        if delta <= 5:
+        if delta <= self.dias_aviso:
             return COLOR_VENCE_HOY
         return COLOR_ACTIVO
 
@@ -751,6 +757,15 @@ class VistaTarjetas(QWidget):
         )
         self._recargar()
 
+    def recargar(self) -> None:
+        """Vuelve a leer tarjetas y consumos (por ejemplo, al cambiar opciones)."""
+        self._recargar()
+
+    def _abrir_proyeccion(self) -> None:
+        from ui.grafico_proyeccion import DialogoProyeccion
+
+        DialogoProyeccion(self._repo, parent=self).exec()
+
     def _abrir_resumenes(self) -> None:
         from ui.dialogo_resumenes import DialogoResumenes
 
@@ -777,5 +792,11 @@ class VistaTarjetas(QWidget):
     # ------------------------------------------------------------------
 
     def _conectar_atajos(self) -> None:
-        QShortcut(QKeySequence("Ctrl+N"), self, activated=self._nuevo_consumo)
-        QShortcut(QKeySequence("Return"), self, activated=self._editar_seleccionado)
+        # Ctrl+N lo maneja la ventana principal según la pestaña activa.
+        # Enter sobre la tabla abre la edición del consumo seleccionado.
+        QShortcut(
+            QKeySequence("Return"),
+            self.tabla,
+            activated=self._editar_seleccionado,
+            context=Qt.ShortcutContext.WidgetShortcut,
+        )

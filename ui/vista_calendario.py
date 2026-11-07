@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from config import formatear_moneda
+from config import DIAS_AVISO_VENCIMIENTO, formatear_moneda
 from models.gasto import Gasto
 from repository.categoria_repo import CategoriaRepo
 from repository.gasto_repo import GastoRepo
@@ -59,6 +59,7 @@ class VistaCalendario(QWidget):
         self.gasto_repo = gasto_repo
         self.tarjeta_repo = tarjeta_repo
         self.vencimientos_mes: list[EventoVencimiento] = []
+        self.dias_aviso = DIAS_AVISO_VENCIMIENTO
 
         hoy = date.today()
         self.anio_actual = hoy.year
@@ -162,9 +163,7 @@ class VistaCalendario(QWidget):
         layout_btns_dia.addWidget(self.btn_agregar_dia, stretch=1)
 
         self.btn_eliminar_dia = QPushButton("🗑️  Eliminar")
-        self.btn_eliminar_dia.setStyleSheet(
-            "background-color: #c0392b; color: white; font-weight: bold; padding: 7px; border-radius: 4px;"
-        )
+        self.btn_eliminar_dia.setProperty("class", "btn-danger")
         self.btn_eliminar_dia.clicked.connect(self._eliminar_gasto_seleccionado_dia)
         layout_btns_dia.addWidget(self.btn_eliminar_dia, stretch=1)
 
@@ -244,7 +243,7 @@ class VistaCalendario(QWidget):
         # Vencimientos de tarjeta (leídos de las tablas de tarjetas, sin duplicar datos)
         if self.tarjeta_repo is not None:
             self.vencimientos_mes = eventos_vencimiento_mes_repo(
-                self.tarjeta_repo, self.anio_actual, self.mes_actual
+                self.tarjeta_repo, self.anio_actual, self.mes_actual, dias_aviso=self.dias_aviso
             )
         else:
             self.vencimientos_mes = []

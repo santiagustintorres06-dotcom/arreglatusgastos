@@ -26,3 +26,10 @@ def asegurar_directorios() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def ruta_manual() -> Path:
+    """MANUAL.html: junto al .exe en el portable, o en docs/ en el código fuente."""
+    if getattr(sys, "frozen", False):
+        return base_dir() / "MANUAL.html"
+    return base_dir() / "docs" / "MANUAL.html"

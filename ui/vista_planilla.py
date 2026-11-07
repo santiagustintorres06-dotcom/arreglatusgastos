@@ -47,6 +47,7 @@ class VistaPlanilla(QWidget):
         miembro_repo: MiembroRepo | None = None,
         gasto_repo: GastoRepo | None = None,
         export_service: ExportService | None = None,
+        tarjeta_repo=None,
         parent=None,
     ):
         super().__init__(parent)
@@ -61,6 +62,7 @@ class VistaPlanilla(QWidget):
                 categoria_repo=categoria_repo,
                 miembro_repo=miembro_repo,
                 resumen_service=resumen_service,
+                tarjeta_repo=tarjeta_repo,
             )
             if gasto_repo
             else None
@@ -99,23 +101,21 @@ class VistaPlanilla(QWidget):
         barra_filtros.addStretch()
 
         # Botón Agregar Gasto
-        self.btn_nuevo = QPushButton("+ Agregar Gasto")
+        self.btn_nuevo = QPushButton("➕ Agregar gasto")
         self.btn_nuevo.setProperty("class", "btn-primary")
-        self.btn_nuevo.setToolTip("Agregar un nuevo gasto en el período actual")
+        self.btn_nuevo.setToolTip("Agregar un nuevo gasto en el período actual (Ctrl+N)")
         self.btn_nuevo.clicked.connect(self._abrir_alta_gasto)
         barra_filtros.addWidget(self.btn_nuevo)
 
         # Botón Eliminar Gasto Seleccionado
         self.btn_eliminar = QPushButton("🗑️ Eliminar")
-        self.btn_eliminar.setStyleSheet(
-            "background-color: #c0392b; color: white; font-weight: bold; padding: 6px 12px; border-radius: 4px;"
-        )
+        self.btn_eliminar.setProperty("class", "btn-danger")
         self.btn_eliminar.setToolTip("Eliminar el gasto seleccionado (o presiona la tecla Supr)")
         self.btn_eliminar.clicked.connect(self._eliminar_gasto_seleccionado)
         barra_filtros.addWidget(self.btn_eliminar)
 
         # Botón Exportar
-        self.btn_exportar = QPushButton("📥 Exportar...")
+        self.btn_exportar = QPushButton("📤 Exportar a Excel")
         self.btn_exportar.setProperty("class", "btn-secondary")
         self.btn_exportar.setToolTip("Exportar los gastos a Excel o CSV")
         self.btn_exportar.clicked.connect(self._exportar_datos)
@@ -196,9 +196,7 @@ class VistaPlanilla(QWidget):
         pie_layout.addStretch()
 
         self.lbl_total_mes = QLabel("Total: $ 0,00")
-        self.lbl_total_mes.setStyleSheet(
-            "font-size: 13pt; font-weight: 800; color: #27ae60;"
-        )
+        self.lbl_total_mes.setProperty("class", "lbl-total")
         pie_layout.addWidget(self.lbl_total_mes)
 
         layout.addWidget(pie_frame)
