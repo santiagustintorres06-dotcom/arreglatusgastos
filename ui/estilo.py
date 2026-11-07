@@ -225,7 +225,7 @@ QTabBar::tab:hover:!selected {{
 /* ═══════════════════════════════════════════════════
    INPUTS: LineEdit, ComboBox, DateEdit
 ═══════════════════════════════════════════════════ */
-QLineEdit, QDateEdit {{
+QLineEdit, QDateEdit, QSpinBox, QDoubleSpinBox {{
     background-color: white;
     border: 1px solid {GRIS_BORDE};
     border-radius: 4px;
@@ -234,12 +234,12 @@ QLineEdit, QDateEdit {{
     min-height: 22px;
 }}
 
-QLineEdit:focus, QDateEdit:focus {{
+QLineEdit:focus, QDateEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus {{
     border: 2px solid {AZUL_ACENTO};
     padding: 4px 7px;
 }}
 
-QLineEdit:disabled, QDateEdit:disabled {{
+QLineEdit:disabled, QDateEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled {{
     background-color: #f4f6f8;
     color: {GRIS_BORDE};
 }}
