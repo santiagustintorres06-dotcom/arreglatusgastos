@@ -47,3 +47,6 @@ demo_datos/
 
 # Copias de seguridad que hace build.bat antes de regenerar el portable
 respaldos_portable/
+
+# Carpeta de actualizacion para llevar a otra PC
+entrega/
