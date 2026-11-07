@@ -88,6 +88,19 @@ CREATE TABLE IF NOT EXISTS resumen_tarjeta_mes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_resumen_tarjeta_mes ON resumen_tarjeta_mes(tarjeta_id, anio, mes);
+
+-- Fechas de cierre/vencimiento corregidas a mano para un resumen puntual
+-- (los bancos a veces corren el cierre unos días). mes = mes de cierre.
+CREATE TABLE IF NOT EXISTS ajuste_resumen_tarjeta (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tarjeta_id INTEGER NOT NULL REFERENCES tarjeta(id),
+    anio INTEGER NOT NULL,
+    mes INTEGER NOT NULL CHECK (mes BETWEEN 1 AND 12),
+    fecha_cierre TEXT NOT NULL,
+    fecha_vencimiento TEXT NOT NULL,
+    creado_en TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tarjeta_id, anio, mes)
+);
 """
 
 

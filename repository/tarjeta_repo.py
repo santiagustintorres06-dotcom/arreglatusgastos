@@ -1,4 +1,6 @@
 import sqlite3
+from datetime import date
+
 from models.tarjeta import Tarjeta, ConsumoTarjeta
 
 
@@ -220,3 +222,54 @@ class TarjetaRepo:
             "SELECT * FROM consumo_tarjeta WHERE estado != 'cancelado'"
         ).fetchall()
         return [_fila_a_consumo(r) for r in rows]
+
+    # --- Pagos por número de cuota (usado al pagar un resumen completo) ---
+
+    def marcar_pagadas_hasta(self, id_consumo: int, numero_cuota: int) -> None:
+        """Deja `numero_cuota` cuotas pagadas (las cuotas se pagan en orden).
+
+        Finaliza el consumo si quedan todas pagadas; si se deshace, vuelve a
+        activo. Los consumos cancelados no se tocan.
+        """
+        self._conn.execute(
+            """UPDATE consumo_tarjeta
+               SET cuotas_pagadas = MAX(0, MIN(?, cantidad_cuotas)),
+                   estado = CASE WHEN MAX(0, MIN(?, cantidad_cuotas)) >= cantidad_cuotas
+                                 THEN 'finalizado' ELSE 'activo' END
+               WHERE id = ? AND estado != 'cancelado'""",
+            (numero_cuota, numero_cuota, id_consumo),
+        )
+        self._conn.commit()
+
+    # --- Ajustes manuales de fechas de un resumen ---
+
+    def ajustes_por_tarjeta(self) -> dict[int, dict[tuple[int, int], tuple[date, date]]]:
+        """{tarjeta_id: {(anio, mes_cierre): (fecha_cierre, fecha_vencimiento)}}"""
+        resultado: dict[int, dict[tuple[int, int], tuple[date, date]]] = {}
+        for r in self._conn.execute("SELECT * FROM ajuste_resumen_tarjeta"):
+            resultado.setdefault(r["tarjeta_id"], {})[(r["anio"], r["mes"])] = (
+                date.fromisoformat(r["fecha_cierre"]),
+                date.fromisoformat(r["fecha_vencimiento"]),
+            )
+        return resultado
+
+    def guardar_ajuste_resumen(
+        self, tarjeta_id: int, anio: int, mes: int, fecha_cierre: date, fecha_vencimiento: date
+    ) -> None:
+        self._conn.execute(
+            """INSERT INTO ajuste_resumen_tarjeta (tarjeta_id, anio, mes, fecha_cierre, fecha_vencimiento)
+               VALUES (?, ?, ?, ?, ?)
+               ON CONFLICT(tarjeta_id, anio, mes)
+               DO UPDATE SET fecha_cierre = excluded.fecha_cierre,
+                             fecha_vencimiento = excluded.fecha_vencimiento""",
+            (tarjeta_id, anio, mes, fecha_cierre.isoformat(), fecha_vencimiento.isoformat()),
+        )
+        self._conn.commit()
+
+    def borrar_ajuste_resumen(self, tarjeta_id: int, anio: int, mes: int) -> None:
+        """Vuelve a las fechas habituales de la tarjeta para ese resumen."""
+        self._conn.execute(
+            "DELETE FROM ajuste_resumen_tarjeta WHERE tarjeta_id = ? AND anio = ? AND mes = ?",
+            (tarjeta_id, anio, mes),
+        )
+        self._conn.commit()
