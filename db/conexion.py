@@ -101,6 +101,12 @@ CREATE TABLE IF NOT EXISTS ajuste_resumen_tarjeta (
     creado_en TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(tarjeta_id, anio, mes)
 );
+
+-- Preferencias del usuario (ej. días de aviso de vencimientos)
+CREATE TABLE IF NOT EXISTS preferencia (
+    clave TEXT PRIMARY KEY,
+    valor TEXT NOT NULL
+);
 """
 
 
