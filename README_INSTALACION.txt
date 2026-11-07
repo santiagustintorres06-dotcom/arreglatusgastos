@@ -60,8 +60,29 @@ SOLUCIÓN DE PROBLEMAS:
 • Si el programa no abre: verificá que copiaste la carpeta
   completa "GastosFamilia" y no solo el archivo .exe.
 
-• Si ves errores al abrir: revisar si hay un archivo de log en
-      GastosFamilia\data\logs\
+• Si ves errores al abrir: revisar el archivo de registro en
+      GastosFamilia\logs\app.log
+
+• "Cargué cosas y no aparecen": fijate abajo a la izquierda de la
+  ventana dónde dice "📁 Datos en: ...". Cada carpeta GastosFamilia
+  guarda SUS propios datos. Usá siempre la misma carpeta. Si el
+  programa encuentra otra copia con datos, te avisa al abrir.
+
+• Para recuperar datos: en GastosFamilia\data\backups\ hay un
+  respaldo por día (gastos_AAAAMMDD.db) y uno del último cierre
+  (gastos_ultimo_cierre.db).
+
+PROBAR SIN TOCAR LOS DATOS REALES:
+----------------------------------
+Doble clic en "Probar con datos de ejemplo.bat". Se abre el programa
+con datos inventados (el título dice MODO PRUEBA). Lo que hagas ahí
+se guarda aparte, en GastosFamilia\demo_datos\.
+
+PARA QUIEN ACTUALIZA EL PROGRAMA:
+---------------------------------
+• Generar el portable SIEMPRE con build.bat (conserva los datos).
+  Nunca ejecutar PyInstaller a mano: borra la carpeta data.
+• Al reemplazar una versión vieja, copiar todo MENOS la carpeta data\.
 
 ========================================================
   Desarrollado con Python + PySide6  |  Oct 2026
