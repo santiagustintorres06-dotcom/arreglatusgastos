@@ -226,9 +226,21 @@ class VistaTarjetas(QWidget):
         self.txt_buscar.textChanged.connect(self._aplicar_filtros)
         hl.addWidget(self.txt_buscar, stretch=1)
 
+        self.btn_resumenes = QPushButton("🧾 Resúmenes")
+        self.btn_resumenes.setToolTip(
+            "Ver mes a mes cada resumen de la tarjeta: cierre, vencimiento, total y pagos"
+        )
+        self.btn_resumenes.clicked.connect(self._abrir_resumenes)
+
+        self.btn_proyeccion = QPushButton("📊 Próximos 6 meses")
+        self.btn_proyeccion.setToolTip("Gráfico con cuánto hay que pagar de tarjetas cada mes")
+        self.btn_proyeccion.clicked.connect(self._abrir_proyeccion)
+
         self.btn_gestionar = QPushButton("🏦 Gestionar tarjetas")
         self.btn_gestionar.setToolTip("Agregar, editar o desactivar tarjetas")
         self.btn_gestionar.clicked.connect(self._gestionar_tarjetas)
+        hl.addWidget(self.btn_resumenes)
+        hl.addWidget(self.btn_proyeccion)
         hl.addWidget(self.btn_gestionar)
 
         return w
@@ -270,16 +282,6 @@ class VistaTarjetas(QWidget):
         self.btn_nuevo.setToolTip("Cargar un nuevo consumo (Ctrl+N)")
         self.btn_nuevo.clicked.connect(self._nuevo_consumo)
 
-        self.btn_resumenes = QPushButton("🧾 Resúmenes")
-        self.btn_resumenes.setToolTip(
-            "Ver mes a mes cada resumen de la tarjeta: cierre, vencimiento, total y pagos"
-        )
-        self.btn_resumenes.clicked.connect(self._abrir_resumenes)
-
-        self.btn_proyeccion = QPushButton("📊 Próximos 6 meses")
-        self.btn_proyeccion.setToolTip("Gráfico con cuánto hay que pagar de tarjetas cada mes")
-        self.btn_proyeccion.clicked.connect(self._abrir_proyeccion)
-
         self.btn_pagar_cuota = QPushButton("✅ Pagar cuota")
         self.btn_pagar_cuota.setToolTip("Registra el pago de 1 cuota en el consumo seleccionado")
         self.btn_pagar_cuota.clicked.connect(self._marcar_cuota_pagada)
@@ -302,16 +304,12 @@ class VistaTarjetas(QWidget):
 
         for b in [
             self.btn_nuevo,
-            self.btn_resumenes,
-            self.btn_proyeccion,
             self.btn_pagar_cuota,
             self.btn_deshacer,
             self.btn_adelantar,
             self.btn_cancelar,
             self.btn_editar,
         ]:
-            # Que el texto nunca se corte
-            b.setMinimumWidth(b.sizeHint().width())
             hl.addWidget(b)
         hl.addStretch()
 
@@ -404,7 +402,7 @@ class VistaTarjetas(QWidget):
             items = [
                 (COL_DESC, TableWidgetItemCustom(consumo.descripcion, consumo.descripcion.lower()), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter),
                 (COL_TARJETA, TableWidgetItemCustom(nombre_tarjeta, nombre_tarjeta.lower()), Qt.AlignmentFlag.AlignCenter),
-                (COL_FECHA, TableWidgetItemCustom(consumo.fecha_compra, consumo.fecha_compra), Qt.AlignmentFlag.AlignCenter),
+                (COL_FECHA, TableWidgetItemCustom(date.fromisoformat(consumo.fecha_compra).strftime("%d/%m/%Y"), consumo.fecha_compra), Qt.AlignmentFlag.AlignCenter),
                 (COL_TOTAL, TableWidgetItemCustom(formatear_moneda(_centavos_a_decimal(consumo.monto_total_cent)), consumo.monto_total_cent), Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter),
                 (COL_CUOTAS, TableWidgetItemCustom(cuotas_txt, consumo.cuotas_restantes), Qt.AlignmentFlag.AlignCenter),
                 (COL_VENC, TableWidgetItemCustom(venc_txt, venc_cmp), Qt.AlignmentFlag.AlignCenter),
