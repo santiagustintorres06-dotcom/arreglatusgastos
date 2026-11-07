@@ -5,6 +5,15 @@ import tempfile
 import traceback
 from pathlib import Path
 
+# MODO PRUEBA: "GastosFamilia.exe --prueba" abre el programa con datos de
+# ejemplo en la carpeta demo_datos, sin tocar los datos reales.
+# "--nueva-prueba" además borra la prueba anterior y empieza de cero.
+# Tiene que definirse ANTES de importar paths (que calcula la carpeta de datos).
+MODO_PRUEBA = "--prueba" in sys.argv or "--nueva-prueba" in sys.argv
+if MODO_PRUEBA and not os.environ.get("GASTOS_DATA_DIR"):
+    _base = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
+    os.environ["GASTOS_DATA_DIR"] = str(_base / "demo_datos")
+
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QCheckBox, QMessageBox
 
@@ -125,6 +134,16 @@ def main() -> None:
     app = QApplication(sys.argv)
     app.setStyle("Fusion")  # Aspecto limpio y moderno consistente en Windows
     app.setStyleSheet(STYLESHEET)  # Tema visual global
+
+    # Modo prueba: crear los datos de ejemplo si todavía no existen
+    # (después de crear QApplication, porque usa servicios Qt)
+    if MODO_PRUEBA:
+        if "--nueva-prueba" in sys.argv and DB_PATH.exists():
+            DB_PATH.unlink()
+        if not DB_PATH.exists():
+            from services.datos_demo import crear_datos_demo
+
+            crear_datos_demo(DB_PATH)
 
     if getattr(sys, "frozen", False) and _carpeta_es_temporal(base_dir()):
         QMessageBox.warning(

@@ -1,21 +1,14 @@
-"""Crea una base de PRUEBA con datos de ejemplo y abre el programa con ella.
+"""Datos de ejemplo para el MODO PRUEBA.
 
-No toca los datos reales (data/gastos.db): usa la carpeta demo_datos/.
-Uso:  .venv\\Scripts\\python.exe herramientas\\cargar_demo.py [--nueva]
-  --nueva  borra la base de prueba anterior y la vuelve a crear.
+Se usan al abrir el programa con  GastosFamilia.exe --prueba  (o el archivo
+"Probar con datos de ejemplo.bat"). Van a una carpeta aparte (demo_datos)
+y nunca tocan los datos reales.
 """
 
 from __future__ import annotations
 
-import os
-import subprocess
-import sys
 from datetime import date, timedelta
 from pathlib import Path
-
-RAIZ = Path(__file__).resolve().parent.parent
-DEMO_DIR = RAIZ / "demo_datos"
-sys.path.insert(0, str(RAIZ))
 
 
 def _sumar_meses(d: date, n: int, dia: int) -> date:
@@ -80,19 +73,3 @@ def crear_datos_demo(ruta_bd: Path, hoy: date | None = None) -> None:
     consumo(naranja, _sumar_meses(hoy, -2, 25), "Televisor", 40000, 12, pagadas=1)
     consumo(naranja, _sumar_meses(hoy, -1, 5), "Ropa", 15000, 2)
     conn.close()
-
-
-def main() -> None:
-    DEMO_DIR.mkdir(exist_ok=True)
-    ruta = DEMO_DIR / "gastos.db"
-    if "--nueva" in sys.argv and ruta.exists():
-        ruta.unlink()
-    if not ruta.exists():
-        crear_datos_demo(ruta)
-        print(f"Base de prueba creada en {ruta}")
-    entorno = dict(os.environ, GASTOS_DATA_DIR=str(DEMO_DIR))
-    subprocess.run([sys.executable, str(RAIZ / "main.py")], env=entorno, cwd=RAIZ)
-
-
-if __name__ == "__main__":
-    main()
