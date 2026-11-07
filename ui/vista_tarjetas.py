@@ -275,7 +275,7 @@ class VistaTarjetas(QWidget):
         )
         self.btn_resumenes.clicked.connect(self._abrir_resumenes)
 
-        self.btn_pagar_cuota = QPushButton("✅ Marcar cuota pagada")
+        self.btn_pagar_cuota = QPushButton("✅ Pagar cuota")
         self.btn_pagar_cuota.setToolTip("Registra el pago de 1 cuota en el consumo seleccionado")
         self.btn_pagar_cuota.clicked.connect(self._marcar_cuota_pagada)
 
@@ -283,11 +283,11 @@ class VistaTarjetas(QWidget):
         self.btn_deshacer.setToolTip("Restaura 1 cuota previamente marcada como pagada")
         self.btn_deshacer.clicked.connect(self._deshacer_cuota)
 
-        self.btn_adelantar = QPushButton("⏩ Adelantar / liquidar cuotas")
+        self.btn_adelantar = QPushButton("⏩ Liquidar todo")
         self.btn_adelantar.setToolTip("Marca todas las cuotas restantes como pagadas y finaliza el consumo")
         self.btn_adelantar.clicked.connect(self._adelantar_cuotas)
 
-        self.btn_cancelar = QPushButton("❌ Cancelar consumo")
+        self.btn_cancelar = QPushButton("❌ Cancelar")
         self.btn_cancelar.setToolTip("Marca el consumo como cancelado (conserva historial)")
         self.btn_cancelar.clicked.connect(self._cancelar_consumo)
 
@@ -304,6 +304,8 @@ class VistaTarjetas(QWidget):
             self.btn_cancelar,
             self.btn_editar,
         ]:
+            # Que el texto nunca se corte
+            b.setMinimumWidth(b.sizeHint().width())
             hl.addWidget(b)
         hl.addStretch()
 
