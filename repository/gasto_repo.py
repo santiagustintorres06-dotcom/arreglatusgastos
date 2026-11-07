@@ -93,8 +93,22 @@ class GastoRepo:
 
     def eliminar(self, id_gasto: int) -> None:
         cursor = self.conn.cursor()
-        cursor.execute("DELETE FROM gasto WHERE id = ?;", (id_gasto,))
-        self.conn.commit()
+        try:
+            # Si el gasto era un resumen de tarjeta pasado a la planilla, se
+            # libera ese mes para poder volver a pasarlo. Sin esto, la clave
+            # foránea impedía borrar el gasto ("FOREIGN KEY constraint failed").
+            cursor.execute(
+                "DELETE FROM resumen_tarjeta_mes WHERE gasto_id = ?;", (id_gasto,)
+            )
+            cursor.execute(
+                "UPDATE consumo_tarjeta SET gasto_id_planilla = NULL WHERE gasto_id_planilla = ?;",
+                (id_gasto,),
+            )
+            cursor.execute("DELETE FROM gasto WHERE id = ?;", (id_gasto,))
+            self.conn.commit()
+        except sqlite3.Error:
+            self.conn.rollback()
+            raise
 
     def obtener_por_id(self, id_gasto: int) -> Gasto | None:
         cursor = self.conn.cursor()

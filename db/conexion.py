@@ -127,6 +127,42 @@ def inicializar_bd(conn: sqlite3.Connection) -> None:
         conn.commit()
 
 
+def copiar_bd_seguro(origen: Path, destino: Path) -> None:
+    """Copia la base usando la API de respaldo de SQLite (copia consistente
+    aunque la base esté abierta). Si falla, recurre a copiar el archivo."""
+    try:
+        src = sqlite3.connect(origen)
+        try:
+            dst = sqlite3.connect(destino)
+            try:
+                src.backup(dst)
+            finally:
+                dst.close()
+        finally:
+            src.close()
+    except sqlite3.Error:
+        shutil.copy2(origen, destino)
+
+
+def respaldo_al_cerrar(
+    ruta_bd: Path | None = None,
+    directorio_backups: Path | None = None,
+) -> Path | None:
+    """Guarda una copia de cómo quedó la base al cerrar el programa.
+
+    El respaldo diario se hace al abrir (estado ANTERIOR a lo cargado ese día);
+    esta copia protege también lo cargado hoy. Se sobrescribe en cada cierre.
+    """
+    ruta_bd = Path(ruta_bd or DB_PATH)
+    directorio_backups = Path(directorio_backups or BACKUP_DIR)
+    if not ruta_bd.exists():
+        return None
+    directorio_backups.mkdir(parents=True, exist_ok=True)
+    destino = directorio_backups / "gastos_ultimo_cierre.db"
+    copiar_bd_seguro(ruta_bd, destino)
+    return destino
+
+
 def realizar_backup(
     ruta_bd: Path | None = None,
     directorio_backups: Path | None = None,
@@ -151,11 +187,11 @@ def realizar_backup(
 
     # Si ya se hizo backup hoy, no lo duplicamos
     if not archivo_destino.exists():
-        shutil.copy2(ruta_bd, archivo_destino)
+        copiar_bd_seguro(ruta_bd, archivo_destino)
 
     # Rotación: conservar solo los últimos max_backups ordenados por fecha
     backups_existentes = sorted(
-        directorio_backups.glob("gastos_*.db"),
+        directorio_backups.glob("gastos_[0-9]*.db"),
         key=lambda p: p.stat().st_mtime,
     )
     if len(backups_existentes) > max_backups:
