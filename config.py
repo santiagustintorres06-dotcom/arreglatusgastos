@@ -62,3 +62,6 @@ def parsear_monto(texto: str) -> Decimal:
         raise ValueError("El monto debe ser mayor a cero.")
 
     return monto
+
+# Días de anticipación para considerar un vencimiento de tarjeta "próximo a vencer"
+DIAS_AVISO_VENCIMIENTO = 5
