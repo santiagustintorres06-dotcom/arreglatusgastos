@@ -125,7 +125,11 @@ def total_tarjetas_sin_volcar_cent(eventos: list[EventoVencimiento]) -> int:
 
 
 def eventos_vencimiento_mes_repo(
-    repo: TarjetaRepo, anio: int, mes: int, hoy: date | None = None
+    repo: TarjetaRepo,
+    anio: int,
+    mes: int,
+    hoy: date | None = None,
+    dias_aviso: int = DIAS_AVISO_VENCIMIENTO,
 ) -> list[EventoVencimiento]:
     """Igual que `eventos_vencimiento_mes`, leyendo los datos desde la base."""
     hoy = hoy or date.today()
@@ -140,5 +144,6 @@ def eventos_vencimiento_mes_repo(
         mes,
         hoy,
         volcados,
+        dias_aviso=dias_aviso,
         ajustes_por_tarjeta=repo.ajustes_por_tarjeta(),
     )
