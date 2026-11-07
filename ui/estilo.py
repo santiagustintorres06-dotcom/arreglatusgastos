@@ -20,6 +20,11 @@ FONDO_TABLA_ALT = "#eaf4fb"
 ROJO_ALERTA = "#e74c3c"
 TEXTO_PRINCIPAL = "#2c3e50"
 TEXTO_SECUNDARIO = "#7f8c8d"
+# Colores con significado (los mismos que usa el calendario de vencimientos)
+VERDE_PAGADO = "#1e8449"
+NARANJA_PROXIMO = "#d35400"
+ROJO_VENCIDO = "#c0392b"
+AZUL_PENDIENTE = "#2471a3"
 
 STYLESHEET = f"""
 /* ═══════════════════════════════════════════════════
@@ -31,7 +36,7 @@ QMainWindow, QDialog {{
 
 QWidget {{
     font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    font-size: 10pt;
+    font-size: 10.5pt;  /* un poco más grande para que se lea bien */
     color: {TEXTO_PRINCIPAL};
 }}
 
@@ -154,6 +159,16 @@ QTableView::item {{
 QTableView::item:selected {{
     background-color: #d4e6f1;
     color: {GRIS_OSCURO};
+}}
+
+/* Fondo del encabezado (también el espacio vacío bajo los números de fila) */
+QHeaderView {{
+    background-color: #f0f3f4;
+}}
+
+QTableCornerButton::section {{
+    background-color: {GRIS_MEDIO};
+    border: none;
 }}
 
 QHeaderView::section {{
@@ -441,5 +456,69 @@ QToolTip {{
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 9pt;
+}}
+
+/* ═══════════════════════════════════════════════════
+   CLASES COMUNES (Etapa 5: unificación visual)
+═══════════════════════════════════════════════════ */
+QPushButton[class="btn-danger"] {{
+    background-color: {ROJO_VENCIDO};
+    color: white;
+    border: 1px solid #a93226;
+}}
+QPushButton[class="btn-danger"]:hover {{
+    background-color: #e74c3c;
+}}
+QPushButton[class="btn-danger"]:pressed {{
+    background-color: #922b21;
+}}
+
+QPushButton[class="btn-icono"] {{
+    min-width: 0px;
+    padding: 6px 10px;
+}}
+
+QPushButton[class="btn-link-status"] {{
+    color: #ecf0f1;
+    background: transparent;
+    border: none;
+    padding: 0 6px;
+    min-width: 0px;
+    font-weight: 400;
+}}
+QPushButton[class="btn-link-status"]:hover {{
+    text-decoration: underline;
+    background: transparent;
+}}
+
+QLabel[class="lbl-status-total"] {{
+    font-weight: 700;
+    font-size: 10.5pt;
+    margin-right: 12px;
+}}
+
+QLabel[class="lbl-total"] {{
+    font-size: 13pt;
+    font-weight: 800;
+    color: {VERDE_PAGADO};
+}}
+
+/* Aviso de vencimientos arriba de la ventana */
+QFrame[class="aviso"] {{
+    background-color: #fdf2e9;
+    border: 1px solid {NARANJA_PROXIMO};
+    border-left: 6px solid {NARANJA_PROXIMO};
+    border-radius: 6px;
+}}
+QFrame[class="aviso"][nivel="vencido"] {{
+    background-color: #fdedec;
+    border: 1px solid {ROJO_VENCIDO};
+    border-left: 6px solid {ROJO_VENCIDO};
+}}
+QLabel[class="lbl-aviso"] {{
+    font-size: 11pt;
+    font-weight: 600;
+    color: {GRIS_OSCURO};
+    background: transparent;
 }}
 """
