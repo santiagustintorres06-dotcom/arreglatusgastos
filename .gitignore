@@ -44,3 +44,6 @@ logs/
 
 # Datos de prueba (probar_demo.bat)
 demo_datos/
+
+# Copias de seguridad que hace build.bat antes de regenerar el portable
+respaldos_portable/

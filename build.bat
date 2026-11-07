@@ -1,26 +1,14 @@
 @echo off
 echo ========================================================
-echo   Compilando Organizador de Gastos Familiares (.exe)
+echo   Generando Organizador de Gastos Familiares portable
+echo   (los datos que ya existan en dist\GastosFamilia\data se conservan)
 echo ========================================================
 echo.
-
-REM Activar entorno virtual
+cd /d "%~dp0"
 if exist .venv\Scripts\activate.bat (
     call .venv\Scripts\activate.bat
 )
-
-REM Instalar pyinstaller si no estuviera instalado
-python -m pip install pyinstaller
-
-REM Generar ejecutable portable con PyInstaller
-echo Compilando aplicacion con PyInstaller (modo onedir)...
-pyinstaller --noconfirm --windowed --name GastosFamilia --add-data "db/schema.sql;db" main.py
-
-echo.
-echo ========================================================
-echo   Compilacion completada con exito!
-echo   La carpeta portable se encuentra en: dist\GastosFamilia\
-echo   Puedes copiar esa carpeta completa a un pendrive o PC.
-echo ========================================================
+python -m pip install -q pyinstaller
+python herramientas\construir_portable.py
 echo.
 pause
