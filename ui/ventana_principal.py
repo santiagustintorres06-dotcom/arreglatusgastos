@@ -1,7 +1,8 @@
 import calendar
 from datetime import date
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -15,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import formatear_moneda
+from paths import DATA_DIR
 from repository.categoria_repo import CategoriaRepo
 from repository.gasto_repo import GastoRepo
 from repository.miembro_repo import MiembroRepo
@@ -152,6 +154,20 @@ class VentanaPrincipal(QMainWindow):
         # 3. Barra de Estado
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
+        # Dónde se guardan los datos (ayuda a detectar si se abre otra copia)
+        self.btn_carpeta_datos = QPushButton(f"📁 Datos en: {DATA_DIR}")
+        self.btn_carpeta_datos.setFlat(True)
+        self.btn_carpeta_datos.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_carpeta_datos.setStyleSheet(
+            "QPushButton { color: #ecf0f1; background: transparent; border: none; padding: 0 6px; }"
+            "QPushButton:hover { text-decoration: underline; }"
+        )
+        self.btn_carpeta_datos.setToolTip("Abrir la carpeta donde se guardan los datos y respaldos")
+        self.btn_carpeta_datos.clicked.connect(
+            lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(DATA_DIR)))
+        )
+        self.status_bar.addWidget(self.btn_carpeta_datos)
+
         self.lbl_status_total = QLabel("")
         self.lbl_status_total.setStyleSheet(
             "font-weight: bold; margin-right: 15px;"

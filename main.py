@@ -5,7 +5,8 @@ import tempfile
 import traceback
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication, QCheckBox, QMessageBox
 
 from db.conexion import (
     inicializar_bd,
@@ -13,13 +14,19 @@ from db.conexion import (
     realizar_backup,
     respaldo_al_cerrar,
 )
-from paths import DB_PATH, LOG_DIR, asegurar_directorios, base_dir
+from paths import DATA_DIR, DB_PATH, LOG_DIR, asegurar_directorios, base_dir
 from repository.categoria_repo import CategoriaRepo
 from repository.gasto_repo import GastoRepo
 from repository.miembro_repo import MiembroRepo
 from repository.tarjeta_repo import TarjetaRepo
 from services.gasto_service import GastoService
 from services.resumen_service import ResumenService
+from services.ubicacion_datos import (
+    contar_datos,
+    guardar_ignorados,
+    leer_ignorados,
+    otras_copias_con_datos,
+)
 from ui.estilo import STYLESHEET
 from ui.ventana_principal import VentanaPrincipal
 
@@ -72,6 +79,41 @@ def _carpeta_es_temporal(carpeta: Path) -> bool:
     return any(t == carpeta or t in carpeta.parents for t in temporales)
 
 
+def avisar_otras_copias(ventana) -> None:
+    """Si hay otra carpeta del programa con datos, avisar (una vez por carpeta)."""
+    try:
+        ignorados = leer_ignorados(DATA_DIR)
+        copias = [c for c in otras_copias_con_datos(DB_PATH) if str(c.ruta_bd) not in ignorados]
+    except Exception:  # noqa: BLE001 - la búsqueda nunca debe impedir usar el programa
+        logger.exception("No se pudo buscar otras copias de datos")
+        return
+    if not copias:
+        return
+    gastos_aca, consumos_aca = contar_datos(DB_PATH)
+    lineas = "\n".join(
+        f"• {c.carpeta_programa}\n   ({c.cantidad_gastos} gastos, {c.cantidad_consumos} consumos"
+        f" de tarjeta, último cambio {c.modificada:%d/%m/%Y %H:%M})"
+        for c in copias[:4]
+    )
+    caja = QMessageBox(ventana)
+    caja.setIcon(QMessageBox.Icon.Warning)
+    caja.setWindowTitle("Hay otra copia del programa con datos")
+    caja.setText(
+        "Encontré otra carpeta del programa que tiene datos cargados:\n\n"
+        f"{lineas}\n\n"
+        f"La copia que estás usando ahora está en:\n• {base_dir()}\n"
+        f"   ({gastos_aca} gastos, {consumos_aca} consumos de tarjeta)\n\n"
+        "Cada carpeta guarda sus propios datos. Si cargaste cosas en la otra,\n"
+        "no van a aparecer acá. Conviene usar SIEMPRE la misma carpeta\n"
+        "(y borrar o renombrar la que no se usa, después de revisarla)."
+    )
+    no_avisar = QCheckBox("No volver a avisar por estas carpetas")
+    caja.setCheckBox(no_avisar)
+    caja.exec()
+    if no_avisar.isChecked():
+        guardar_ignorados(DATA_DIR, ignorados | {str(c.ruta_bd) for c in copias})
+
+
 def main() -> None:
     # 1. Asegurar estructura de carpetas portable (data, backups, logs)
     asegurar_directorios()
@@ -95,7 +137,13 @@ def main() -> None:
             "al Escritorio o a Documentos y abrí el programa desde ahí.",
         )
 
-    # 3. Conexión y primera configuración de la base de datos
+    # 3. Respaldo diario ANTES de tocar/migrar la base (conserva últimos 30)
+    try:
+        realizar_backup()
+    except Exception:  # noqa: BLE001 - un backup fallido no debe impedir usar el programa
+        logger.exception("No se pudo realizar el backup diario")
+
+    # 4. Conexión y migración segura (CREATE TABLE IF NOT EXISTS)
     try:
         conn = obtener_conexion()
         inicializar_bd(conn)
@@ -111,12 +159,6 @@ def main() -> None:
             f"Detalle técnico: {e}",
         )
         sys.exit(1)
-
-    # 4. Backup automático diario (conserva últimos 30)
-    try:
-        realizar_backup()
-    except Exception:  # noqa: BLE001 - un backup fallido no debe impedir usar el programa
-        logger.exception("No se pudo realizar el backup diario")
 
     # 5. Inicializar capas de Repositorio y Servicios
     cat_repo = CategoriaRepo(conn)
@@ -137,6 +179,8 @@ def main() -> None:
         tarjeta_repo=tarjeta_repo,
     )
     ventana.show()
+    # Revisar, ya con la ventana abierta, si hay otra carpeta del programa con datos
+    QTimer.singleShot(400, lambda: avisar_otras_copias(ventana))
 
     # 7. Ejecutar loop de eventos
     codigo_salida = app.exec()

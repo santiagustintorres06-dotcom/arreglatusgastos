@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -12,7 +13,9 @@ def base_dir() -> Path:
     return Path(__file__).resolve().parent
 
 
-DATA_DIR = base_dir() / "data"
+# GASTOS_DATA_DIR permite usar otra carpeta de datos (por ejemplo, el modo demo
+# para probar sin tocar los datos reales). Normalmente no se define.
+DATA_DIR = Path(os.environ["GASTOS_DATA_DIR"]) if os.environ.get("GASTOS_DATA_DIR") else base_dir() / "data"
 DB_PATH = DATA_DIR / "gastos.db"
 BACKUP_DIR = DATA_DIR / "backups"
 LOG_DIR = base_dir() / "logs"
