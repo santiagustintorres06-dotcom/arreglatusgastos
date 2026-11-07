@@ -21,9 +21,20 @@ from models.gasto import Gasto
 from repository.categoria_repo import CategoriaRepo
 from repository.gasto_repo import GastoRepo
 from repository.miembro_repo import MiembroRepo
+from repository.tarjeta_repo import TarjetaRepo
+from services.calendario_tarjetas import (
+    ETIQUETA_ESTADO,
+    PAGADO,
+    PENDIENTE,
+    PROXIMO,
+    VENCIDO,
+    EventoVencimiento,
+    eventos_vencimiento_mes_repo,
+    total_tarjetas_sin_volcar_cent,
+)
 from services.gasto_service import GastoService
 from services.resumen_service import ResumenService
-from ui.calendario_widget import CalendarioGastosWidget
+from ui.calendario_widget import COLOR_ESTADO, CalendarioGastosWidget
 from ui.dialogo_gasto import DialogoGasto
 
 
@@ -37,6 +48,7 @@ class VistaCalendario(QWidget):
         categoria_repo: CategoriaRepo,
         miembro_repo: MiembroRepo,
         gasto_repo: GastoRepo,
+        tarjeta_repo: TarjetaRepo | None = None,
         parent=None,
     ):
         super().__init__(parent)
@@ -45,6 +57,8 @@ class VistaCalendario(QWidget):
         self.categoria_repo = categoria_repo
         self.miembro_repo = miembro_repo
         self.gasto_repo = gasto_repo
+        self.tarjeta_repo = tarjeta_repo
+        self.vencimientos_mes: list[EventoVencimiento] = []
 
         hoy = date.today()
         self.anio_actual = hoy.year
@@ -77,17 +91,28 @@ class VistaCalendario(QWidget):
 
         layout_h.addStretch()
 
-        self.lbl_total_mes = QLabel("Total: $ 0,00")
+        self.lbl_total_mes = QLabel("Gastos: $ 0,00")
         self.lbl_total_mes.setStyleSheet(
             "font-size: 13px; font-weight: bold; color: #27ae60;"
         )
         layout_h.addWidget(self.lbl_total_mes)
+
+        # Cuotas de tarjeta del mes que todavía no se pasaron a la Planilla
+        self.lbl_tarjetas_mes = QLabel("")
+        self.lbl_tarjetas_mes.setStyleSheet(
+            "font-size: 13px; font-weight: bold; color: #2471a3; margin-left: 12px;"
+        )
+        layout_h.addWidget(self.lbl_tarjetas_mes)
 
         panel_cal.addWidget(frame_header)
 
         # Widget de Calendario con mapa de calor
         self.calendario = CalendarioGastosWidget(self)
         panel_cal.addWidget(self.calendario, stretch=1)
+
+        # Leyenda de colores de los vencimientos de tarjeta
+        if self.tarjeta_repo is not None:
+            panel_cal.addLayout(self._crear_leyenda())
 
         layout_principal.addLayout(panel_cal, stretch=65)
 
@@ -145,8 +170,36 @@ class VistaCalendario(QWidget):
 
         layout_det.addLayout(layout_btns_dia)
 
+        # Vencimientos de tarjeta del día seleccionado (oculto si no hay)
+        self.lbl_titulo_venc = QLabel("💳 Vencimientos de tarjeta")
+        self.lbl_titulo_venc.setFont(font_tit)
+        layout_det.addWidget(self.lbl_titulo_venc)
+
+        self.lista_vencimientos = QListWidget()
+        self.lista_vencimientos.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        self.lista_vencimientos.setWordWrap(True)
+        self.lista_vencimientos.setStyleSheet("QListWidget::item { padding: 3px 6px; }")
+        layout_det.addWidget(self.lista_vencimientos, stretch=1)
+
+        self.lbl_titulo_venc.setVisible(False)
+        self.lista_vencimientos.setVisible(False)
+
         self.frame_detalle.setProperty("class", "panel-detalle")
         layout_principal.addWidget(self.frame_detalle, stretch=35)
+
+    def _crear_leyenda(self) -> QHBoxLayout:
+        leyenda = QHBoxLayout()
+        leyenda.setSpacing(14)
+        leyenda.addWidget(QLabel("Vencimientos de tarjeta:"))
+        for estado in (PENDIENTE, PROXIMO, VENCIDO, PAGADO):
+            chip = QLabel(f"  {ETIQUETA_ESTADO[estado]}  ")
+            chip.setStyleSheet(
+                f"background-color: {COLOR_ESTADO[estado]}; color: white;"
+                " font-weight: bold; border-radius: 4px; padding: 2px 4px;"
+            )
+            leyenda.addWidget(chip)
+        leyenda.addStretch()
+        return leyenda
 
     def _conectar_eventos(self) -> None:
         # Clic en un día del calendario
@@ -186,7 +239,31 @@ class VistaCalendario(QWidget):
         total_mes = self.resumen_service.total_mes(
             self.anio_actual, self.mes_actual
         )
-        self.lbl_total_mes.setText(f"Total: {formatear_moneda(total_mes)}")
+        self.lbl_total_mes.setText(f"Gastos: {formatear_moneda(total_mes)}")
+
+        # Vencimientos de tarjeta (leídos de las tablas de tarjetas, sin duplicar datos)
+        if self.tarjeta_repo is not None:
+            self.vencimientos_mes = eventos_vencimiento_mes_repo(
+                self.tarjeta_repo, self.anio_actual, self.mes_actual
+            )
+        else:
+            self.vencimientos_mes = []
+        self.calendario.actualizar_vencimientos(self.vencimientos_mes)
+
+        # Lo ya pasado a la Planilla está dentro de "Gastos": no se suma dos veces
+        sin_volcar = Decimal(total_tarjetas_sin_volcar_cent(self.vencimientos_mes)) / 100
+        if sin_volcar > 0:
+            self.lbl_tarjetas_mes.setText(
+                f"+ 💳 Tarjetas: {formatear_moneda(sin_volcar)}"
+                f"  =  Total real: {formatear_moneda(total_mes + sin_volcar)}"
+            )
+            self.lbl_tarjetas_mes.setToolTip(
+                "Cuotas de tarjeta de este mes que todavía no se pasaron a la Planilla.\n"
+                "Las que ya se pasaron figuran dentro de 'Gastos'."
+            )
+        else:
+            self.lbl_tarjetas_mes.setText("")
+            self.lbl_tarjetas_mes.setToolTip("")
 
         self._actualizar_panel_lateral()
 
@@ -219,6 +296,46 @@ class VistaCalendario(QWidget):
             self.lista_gastos.addItem(item_vacio)
 
         self.lbl_total_dia.setText(f"Total del día: {formatear_moneda(total_dia)}")
+        self._actualizar_vencimientos_del_dia()
+
+    def _actualizar_vencimientos_del_dia(self) -> None:
+        """Muestra el detalle de los vencimientos de tarjeta del día elegido."""
+        eventos = [e for e in self.vencimientos_mes if e.fecha == self.fecha_seleccionada]
+        self.lista_vencimientos.clear()
+        hay = bool(eventos)
+        self.lbl_titulo_venc.setVisible(hay)
+        self.lista_vencimientos.setVisible(hay)
+        if not hay:
+            return
+
+        font_negrita = QFont()
+        font_negrita.setBold(True)
+        for ev in eventos:
+            total = formatear_moneda(Decimal(ev.total_cent) / 100)
+            cabecera = QListWidgetItem(
+                f"{ev.tarjeta_nombre} — {total}  ({ETIQUETA_ESTADO[ev.estado]})"
+            )
+            cabecera.setFont(font_negrita)
+            cabecera.setForeground(QColor(COLOR_ESTADO[ev.estado]))
+            self.lista_vencimientos.addItem(cabecera)
+
+            for c in ev.cuotas:
+                monto = formatear_moneda(Decimal(c.monto_cent) / 100)
+                marca = "  ✔ pagada" if c.pagada else ""
+                item = QListWidgetItem(
+                    f"    • {c.descripcion} — cuota {c.numero_cuota}/{c.total_cuotas}: {monto}{marca}"
+                )
+                if c.pagada:
+                    item.setForeground(QColor(COLOR_ESTADO[PAGADO]))
+                self.lista_vencimientos.addItem(item)
+
+            if ev.estado != PAGADO and ev.pendiente_cent != ev.total_cent:
+                falta = formatear_moneda(Decimal(ev.pendiente_cent) / 100)
+                self.lista_vencimientos.addItem(QListWidgetItem(f"    Falta pagar: {falta}"))
+            if ev.volcado_planilla:
+                aviso = QListWidgetItem("    📥 Ya registrado en la Planilla como gasto")
+                aviso.setForeground(QColor("#7f8c8d"))
+                self.lista_vencimientos.addItem(aviso)
 
     def _abrir_alta_para_dia(self) -> None:
         dialogo = DialogoGasto(

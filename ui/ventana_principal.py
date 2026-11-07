@@ -132,6 +132,7 @@ class VentanaPrincipal(QMainWindow):
             categoria_repo=self.categoria_repo,
             miembro_repo=self.miembro_repo,
             gasto_repo=self.gasto_repo,
+            tarjeta_repo=self.tarjeta_repo,
             parent=self,
         )
         self.tabs.addTab(self.vista_calendario, "📅 Vista Calendario")
@@ -159,6 +160,8 @@ class VentanaPrincipal(QMainWindow):
 
     def _conectar_eventos(self) -> None:
         self.gasto_service.gasto_cambiado.connect(self._actualizar_barra_estado)
+        # Cambios en tarjetas/cuotas → el Calendario se redibuja solo
+        self.vista_tarjetas.datos_cambiados.connect(self.vista_calendario.recargar_calendario)
 
     def closeEvent(self, event) -> None:
         # Guardar la celda que se esté escribiendo en la planilla antes de cerrar

@@ -5,6 +5,36 @@ from PySide6.QtCore import QDate, QRect, Qt
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import QCalendarWidget
 
+from services.calendario_tarjetas import (
+    PAGADO,
+    PENDIENTE,
+    PROXIMO,
+    VENCIDO,
+    EventoVencimiento,
+)
+
+# Colores por estado de vencimiento de tarjeta (verde pagado, naranja próximo,
+# rojo vencido, azul pendiente)
+COLOR_ESTADO = {
+    PENDIENTE: "#2471a3",
+    PROXIMO: "#d35400",
+    VENCIDO: "#c0392b",
+    PAGADO: "#1e8449",
+}
+# Si en un mismo día hay varias tarjetas, se muestra el estado más urgente
+_PRIORIDAD = {VENCIDO: 0, PROXIMO: 1, PENDIENTE: 2, PAGADO: 3}
+
+
+def estado_mas_urgente(eventos: list[EventoVencimiento]) -> str:
+    return min((e.estado for e in eventos), key=lambda est: _PRIORIDAD[est])
+
+
+def texto_monto_compacto(monto: Decimal) -> str:
+    """Formato corto para que entre en la celda: $ 15.400 o $ 250,50"""
+    if monto >= 1000:
+        return f"${int(monto):,.0f}".replace(",", ".")
+    return f"${monto:,.2f}".replace(".", ",")
+
 
 class CalendarioGastosWidget(QCalendarWidget):
     """Subclase de QCalendarWidget que dibuja el mapa de calor y el monto total en cada celda."""
@@ -13,6 +43,7 @@ class CalendarioGastosWidget(QCalendarWidget):
         super().__init__(parent)
         self.totales_por_dia: dict[date, Decimal] = {}
         self.monto_maximo: Decimal = Decimal("0.00")
+        self.vencimientos: dict[date, list[EventoVencimiento]] = {}
         self.setVerticalHeaderFormat(
             QCalendarWidget.VerticalHeaderFormat.NoVerticalHeader
         )
@@ -25,6 +56,13 @@ class CalendarioGastosWidget(QCalendarWidget):
             self.monto_maximo = max(self.totales_por_dia.values())
         else:
             self.monto_maximo = Decimal("0.00")
+        self.updateCells()
+
+    def actualizar_vencimientos(self, eventos: list[EventoVencimiento]) -> None:
+        """Recibe los vencimientos de tarjeta del mes y los agrupa por fecha."""
+        self.vencimientos = {}
+        for ev in eventos:
+            self.vencimientos.setdefault(ev.fecha, []).append(ev)
         self.updateCells()
 
     def paintCell(
@@ -84,12 +122,12 @@ class CalendarioGastosWidget(QCalendarWidget):
                 rect.width() - 4,
                 rect.height() // 2 - 3,
             )
-            # Formato compacto para caber en la celda: $ 15.400 o $ 1.250,50
-            if total_dia >= 1000:
-                entero = int(total_dia)
-                texto_monto = f"${entero:,.0f}".replace(",", ".")
-            else:
-                texto_monto = f"${total_dia:,.2f}".replace(".", ",")
+            if fecha_obj in self.vencimientos:
+                # Dejar lugar abajo para la franja del vencimiento de tarjeta
+                rect_monto = QRect(
+                    rect.x() + 2, rect.y() + 18, rect.width() - 4, max(12, rect.height() - 42)
+                )
+            texto_monto = texto_monto_compacto(total_dia)
 
             font_monto = QFont()
             font_monto.setPointSize(8)
@@ -108,4 +146,39 @@ class CalendarioGastosWidget(QCalendarWidget):
                 texto_monto,
             )
 
+        # 5. Vencimiento de tarjeta: franja de color con el total del resumen
+        eventos = self.vencimientos.get(fecha_obj) if es_mes_actual else None
+        if eventos:
+            self._pintar_vencimiento(painter, rect, eventos)
+
         painter.restore()
+
+    def _pintar_vencimiento(
+        self, painter: QPainter, rect: QRect, eventos: list[EventoVencimiento]
+    ) -> None:
+        estado = estado_mas_urgente(eventos)
+        color = QColor(COLOR_ESTADO[estado])
+        total = Decimal(sum(e.total_cent for e in eventos)) / 100
+
+        # Borde de color alrededor de la celda para que se note el día
+        painter.setPen(QPen(color, 2))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRect(rect.adjusted(1, 1, -2, -2))
+
+        alto = min(18, max(14, rect.height() // 4))
+        franja = QRect(rect.x() + 3, rect.bottom() - alto - 2, rect.width() - 6, alto)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(color))
+        painter.drawRoundedRect(franja, 3, 3)
+
+        font = QFont()
+        font.setPointSize(8)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.setPen(QColor("#ffffff"))
+        prefijo = "✔ " if estado == PAGADO else "💳 "
+        painter.drawText(
+            franja,
+            Qt.AlignmentFlag.AlignCenter,
+            prefijo + texto_monto_compacto(total),
+        )
