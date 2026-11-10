@@ -10,6 +10,7 @@ Aplicación de escritorio en Python para registrar y visualizar los gastos mensu
 - **Precisión monetaria:** Almacenamiento en centavos enteros en base de datos (`INTEGER`) y manejo en `Decimal` para evitar errores de redondeo.
 - **Arquitectura en capas:** UI (PySide6) -> Servicios -> Repositorio -> Base de datos (SQLite).
 - **Modo portable:** Diseñado para correr de manera autónoma con SQLite local y backups automáticos diarios.
+- **Gestión de tarjetas de crédito:** sección dedicada para gestionar los gastos con tarjeta de crédito (solo gastos; no se almacenan números de tarjeta ni datos personales).
 
 ## Requisitos y Configuración
 
